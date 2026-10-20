@@ -34,13 +34,18 @@ yarn dev       # start the client and the Worker together
 
 Open http://localhost:5173. Vite serves the client and proxies `/api` to the Worker.
 
-## Tests
-
-No tests exist yet; they arrive with the server proxy and domain logic. Once they do:
+## Checks
 
 ```bash
-yarn test --run   # run the Vitest suite once (plain `yarn test` watches)
+yarn check         # lint → format:check → typecheck → test → build
+yarn test          # Vitest once (`yarn vitest` for watch mode)
+yarn lint          # ESLint (type-checked) across client and server
+yarn format:check  # Prettier; `yarn format` rewrites
+yarn typecheck     # tsc for client and server
+yarn build         # client production build
 ```
+
+No tests exist yet; they arrive with the server proxy and domain logic.
 
 ## Layout
 
