@@ -71,7 +71,16 @@ export type FacilitiesResponse = {
 };
 
 // Closed set of error codes the Worker can return. Grows as handlers are added.
-export type ErrorCode = "missing_token" | "upstream_bad_shape";
+export type ErrorCode =
+  | "missing_token"
+  | "upstream_auth"
+  | "upstream_rate_limited"
+  | "upstream_network"
+  | "upstream_non_2xx"
+  | "upstream_invalid_json"
+  | "upstream_bad_shape"
+  | "not_found"
+  | "internal_error";
 
 // What the Worker returns to the client on any failure.
 export type ErrorResponse = { error: { code: ErrorCode; message: string } };

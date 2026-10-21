@@ -1,60 +1,139 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
   UpstreamEnvelope,
+  type ErrorCode,
   type ErrorResponse,
   type FacilitiesResponse,
 } from "./contract";
 
 type Env = {
-  // Optional on purpose: a missing binding must be a handled error, not a type lie.
+  // Optional so that a missing token is a handled error, not a type lie
   OPEN_ELECTRICITY_API_TOKEN?: string;
 };
 
 const UPSTREAM_URL = "https://api.openelectricity.org.au/v4/facilities/";
+// Give up after 15s so a stalled upstream becomes an error, not an endless wait
+const UPSTREAM_TIMEOUT_MS = 15_000;
+
+const ERRORS: Record<
+  ErrorCode,
+  { status: ContentfulStatusCode; message: string }
+> = {
+  missing_token: {
+    status: 500,
+    message: "Server is missing its upstream API token.",
+  },
+  upstream_auth: {
+    status: 502,
+    message: "Upstream rejected the server's credentials.",
+  },
+  upstream_rate_limited: {
+    status: 503,
+    message: "Upstream rate limit reached; try again shortly.",
+  },
+  upstream_network: { status: 502, message: "Could not reach upstream." },
+  upstream_non_2xx: { status: 502, message: "Upstream returned an error." },
+  upstream_invalid_json: {
+    status: 502,
+    message: "Upstream returned a non-JSON body.",
+  },
+  upstream_bad_shape: {
+    status: 502,
+    message: "Upstream returned an unexpected response shape.",
+  },
+  not_found: { status: 404, message: "No such route." },
+  internal_error: { status: 500, message: "Unexpected server error." },
+};
+
+function log(fields: Record<string, unknown>) {
+  console.log(JSON.stringify(fields));
+}
+
+function fail(
+  c: Context<{ Bindings: Env }>,
+  code: ErrorCode,
+  fields: Record<string, unknown> = {},
+) {
+  const { status, message } = ERRORS[code];
+  log({ route: c.req.path, error: code, ...fields });
+  // Never let a browser or CDN cache an error; a retry must hit upstream again.
+  c.header("Cache-Control", "no-store");
+  return c.json<ErrorResponse>({ error: { code, message } }, status);
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.get("/api/facilities", async (c) => {
-  // The token comes from the Worker binding (server/.dev.vars locally).
-  // It never leaves this function.
+  const started = Date.now();
+  const durationMs = () => Date.now() - started;
   const token = c.env.OPEN_ELECTRICITY_API_TOKEN;
-  if (!token) {
-    return c.json<ErrorResponse>(
-      {
-        error: {
-          code: "missing_token",
-          message: "Server is missing its upstream API token.",
-        },
-      },
-      500,
-    );
+  if (!token) return fail(c, "missing_token");
+
+  let res: Response;
+  try {
+    res = await fetch(UPSTREAM_URL, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+  } catch {
+    return fail(c, "upstream_network", { durationMs: durationMs() });
   }
 
-  const res = await fetch(UPSTREAM_URL, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  const json: unknown = await res.json();
+  const upstreamStatus = res.status;
+  if (!res.ok) {
+    const code: ErrorCode =
+      upstreamStatus === 401 || upstreamStatus === 403
+        ? "upstream_auth"
+        : upstreamStatus === 429
+          ? "upstream_rate_limited"
+          : "upstream_non_2xx";
+    return fail(c, code, { upstreamStatus, durationMs: durationMs() });
+  }
 
-  // Validate before trusting: a TypeScript type says nothing about real JSON.
+  let json: unknown;
+  try {
+    json = await res.json();
+  } catch {
+    return fail(c, "upstream_invalid_json", {
+      upstreamStatus,
+      durationMs: durationMs(),
+    });
+  }
+
+  // Validate before trusting
   const parsed = UpstreamEnvelope.safeParse(json);
   if (!parsed.success) {
-    return c.json<ErrorResponse>(
-      {
-        error: {
-          code: "upstream_bad_shape",
-          message: "Upstream returned an unexpected response shape.",
-        },
-      },
-      502,
-    );
+    return fail(c, "upstream_bad_shape", {
+      upstreamStatus,
+      durationMs: durationMs(),
+      issueCount: parsed.error.issues.length,
+      issues: parsed.error.issues
+        .slice(0, 5)
+        .map((i) => ({ path: i.path.map(String).join("."), code: i.code })),
+    });
   }
 
+  const { data, created_at } = parsed.data;
+  log({
+    route: c.req.path,
+    upstreamStatus,
+    durationMs: durationMs(),
+    facilities: data.length,
+    units: data.reduce((n, f) => n + f.units.length, 0),
+  });
   const body: FacilitiesResponse = {
-    facilities: parsed.data.data,
+    facilities: data,
     fetchedAt: new Date().toISOString(),
-    sourceCreatedAt: parsed.data.created_at,
+    sourceCreatedAt: created_at,
   };
   return c.json(body);
 });
+
+// Fallbacks
+app.notFound((c) => fail(c, "not_found"));
+app.onError((err, c) =>
+  fail(c, "internal_error", { name: err.name, message: err.message }),
+);
 
 export default app;
