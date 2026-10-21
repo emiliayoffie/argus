@@ -1,34 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { UpstreamEnvelope } from "../../../server/src/contract";
 import fixture from "./__fixtures__/facilities.sample.json";
+import { row } from "./__fixtures__/rows";
 import { groupBy, summarize } from "./aggregate";
 import { facilitiesToRows } from "./normalize";
-import type { UnitRow } from "./types";
-
-const row = (over: Partial<UnitRow>): UnitRow => ({
-  facilityCode: "F",
-  facilityName: "Facility",
-  unitCode: "U",
-  state: "NSW",
-  region: "NSW1",
-  fueltech: "solar_utility",
-  techGroup: "solar",
-  status: "operating",
-  rawStatus: "operating",
-  dispatchType: "GENERATOR",
-  mwEligible: true,
-  capacityMw: 10,
-  storageMwh: null,
-  commencement: null,
-  closure: null,
-  expectedOperation: null,
-  expectedClosure: null,
-  lat: null,
-  lng: null,
-  dataFirstSeen: null,
-  dataLastSeen: null,
-  ...over,
-});
 
 describe("summarize", () => {
   it("returns zeros for no rows", () => {

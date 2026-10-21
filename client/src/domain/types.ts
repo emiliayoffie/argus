@@ -156,3 +156,32 @@ export type BreakdownGroup = {
   facilities: number;
   units: number;
 };
+
+// The one date worth showing for a unit, chosen by its status.
+export type KeyDate = {
+  label: string;
+  date: SourceDate;
+  // `committed` only: the expected date is already before the dataset date.
+  past: boolean;
+};
+
+// One table row per facility, built from the shown unit rows.
+export type FacilityRow = {
+  code: string;
+  name: string;
+  state: State;
+  region: string;
+  // From matching units only.
+  techGroups: TechGroup[];
+  statuses: Status[];
+  // Sum over matching MW-eligible units with known capacity; `null` when none.
+  matchingMw: number | null;
+  matchingUnits: number;
+  // From ALL of the facility's units, ignoring filters and drilldown.
+  retiredUnits: number;
+  allUnits: number;
+  keyDate: KeyDate | null;
+  // Facility coordinates; `null` when upstream has none. The row still counts.
+  lat: number | null;
+  lng: number | null;
+};
