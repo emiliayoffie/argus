@@ -122,6 +122,15 @@ export type Filters = {
 // the main filters, without changing the breakdown itself.
 export type Drilldown = { dim: Dimension; key: string } | null;
 
+// Everything that defines a view and belongs in the URL. Sort and page are
+// deliberately not here: they are how you look at a result, not what it is
+export type AppState = {
+  filters: Filters;
+  groupBy: Dimension;
+  measure: Measure;
+  drilldown: Drilldown;
+};
+
 export type StatusMw = {
   status: Status;
   mw: number;
