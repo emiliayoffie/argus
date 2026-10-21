@@ -2,9 +2,17 @@ import { useState } from "react";
 import "./App.css";
 import { ERROR_COPY, useFacilities } from "./api/useFacilities";
 import { BreakdownPanel } from "./components/BreakdownPanel";
+import { FacilityTable } from "./components/FacilityTable";
 import { EMPTY_FILTERS, FilterBar } from "./components/FilterBar";
 import { SummaryStrip } from "./components/SummaryStrip";
 import { groupBy, summarize } from "./domain/aggregate";
+import {
+  DEFAULT_SORT,
+  facilityLifecycle,
+  groupByFacility,
+  sortFacilities,
+  type Sort,
+} from "./domain/facilities";
 import { applyDrilldown, applyFilters } from "./domain/filter";
 import { formatCount, formatInstant } from "./domain/format";
 import {
@@ -21,6 +29,8 @@ export default function App() {
   const [dim, setDim] = useState<Dimension>("techGroup");
   const [measure, setMeasure] = useState<Measure>("mw");
   const [drilldown, setDrilldown] = useState<Drilldown>(null);
+  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
+  const [page, setPage] = useState(0);
 
   // Everything below is derived from the state above; no second copy of the
   // data is kept. `base` feeds the bars; `shown` is base narrowed by a bar
@@ -29,19 +39,38 @@ export default function App() {
   const shown = applyDrilldown(base, drilldown);
   const summary = summarize(shown);
   const groups = groupBy(base, dim, measure);
+  const facilities = data
+    ? sortFacilities(
+        groupByFacility(
+          shown,
+          facilityLifecycle(data.rows),
+          data.sourceCreatedAt,
+        ),
+        sort,
+      )
+    : [];
 
   // A drilldown only makes sense against the bars it was clicked on, so any
-  // change to the filters or grouping clears it
+  // change to the filters or grouping clears it. Anything that changes which
+  // facilities are listed also goes back to the first page
   const changeFilters = (next: Filters) => {
     setFilters(next);
     setDrilldown(null);
+    setPage(0);
   };
   const changeDim = (next: Dimension) => {
     setDim(next);
     setDrilldown(null);
+    setPage(0);
   };
-  const toggleDrilldown = (key: string) =>
-    setDrilldown(drilldown?.key === key ? null : { dim, key });
+  const changeDrilldown = (next: Drilldown) => {
+    setDrilldown(next);
+    setPage(0);
+  };
+  const changeSort = (next: Sort) => {
+    setSort(next);
+    setPage(0);
+  };
 
   return (
     <main>
@@ -84,22 +113,32 @@ export default function App() {
             selectedKey={drilldown?.key ?? null}
             onGroupBy={changeDim}
             onMeasure={setMeasure}
-            onSelect={toggleDrilldown}
+            onSelect={(key) =>
+              changeDrilldown(drilldown?.key === key ? null : { dim, key })
+            }
           />
           {drilldown && (
             <p className="drilldown-note">
               Showing <strong>{label(drilldown.dim, drilldown.key)}</strong>{" "}
               only.{" "}
-              <button type="button" onClick={() => setDrilldown(null)}>
+              <button type="button" onClick={() => changeDrilldown(null)}>
                 Clear
               </button>
             </p>
           )}
           <SummaryStrip summary={summary} />
-          {base.length === 0 && (
+          {facilities.length === 0 ? (
             <p className="status">
               No units match these filters. Try removing one.
             </p>
+          ) : (
+            <FacilityTable
+              facilities={facilities}
+              sort={sort}
+              onSort={changeSort}
+              page={page}
+              onPage={setPage}
+            />
           )}
           <p className="muted">
             {formatCount(data.rows.length)} units in the full dataset · fetched{" "}
