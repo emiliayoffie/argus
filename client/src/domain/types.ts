@@ -122,6 +122,9 @@ export type Filters = {
 // the main filters, without changing the breakdown itself.
 export type Drilldown = { dim: Dimension; key: string } | null;
 
+// Where the map is looking; null means "fit to the current selection"
+export type MapView = { lat: number; lng: number; zoom: number } | null;
+
 // Everything that defines a view and belongs in the URL. Sort and page are
 // deliberately not here: they are how you look at a result, not what it is
 export type AppState = {
@@ -129,6 +132,10 @@ export type AppState = {
   groupBy: Dimension;
   measure: Measure;
   drilldown: Drilldown;
+  view: MapView;
+  // Facility codes highlighted on the map and in the table. A highlight, not
+  // a filter: totals never change
+  selected: string[];
 };
 
 export type StatusMw = {

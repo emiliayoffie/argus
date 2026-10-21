@@ -8,6 +8,7 @@ import {
   type AppState,
   type Dimension,
   type Drilldown,
+  type MapView,
 } from "./types";
 
 export const SEARCH_MAX_LENGTH = 100;
@@ -17,7 +18,48 @@ export const DEFAULT_STATE: AppState = {
   groupBy: "techGroup",
   measure: "mw",
   drilldown: null,
+  view: null,
+  selected: [],
 };
+
+// Facility codes are short upstream identifiers; anything else is ignored
+const FACILITY_CODE = /^[A-Za-z0-9_-]{1,40}$/;
+export const MAX_SELECTED = 20;
+
+// sel=A,B,C: valid, deduplicated codes, capped at MAX_SELECTED
+export function parseSelected(value: string | null): string[] {
+  if (!value) return [];
+  const out: string[] = [];
+  for (const code of value.split(",")) {
+    if (FACILITY_CODE.test(code) && !out.includes(code)) out.push(code);
+    if (out.length === MAX_SELECTED) break;
+  }
+  return out;
+}
+
+// Adds or removes one facility from the highlight set, dropping the oldest
+// when over the cap
+export function toggleSelected(selected: string[], code: string): string[] {
+  return selected.includes(code)
+    ? selected.filter((c) => c !== code)
+    : [...selected, code].slice(-MAX_SELECTED);
+}
+
+const MAX_ZOOM = 20;
+
+// view=lat,lng,zoom. Out of range or malformed means "fit to selection"
+export function parseView(value: string | null): MapView {
+  if (!value) return null;
+  const parts = value.split(",").map(Number);
+  if (parts.length !== 3 || !parts.every(Number.isFinite)) return null;
+  const [lat, lng, zoom] = parts;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  if (zoom < 0 || zoom > MAX_ZOOM) return null;
+  return { lat, lng, zoom };
+}
+
+export const serializeView = (view: NonNullable<MapView>): string =>
+  `${view.lat.toFixed(4)},${view.lng.toFixed(4)},${Number(view.zoom.toFixed(2))}`;
 
 // Which keys a drilldown may use for each dimension
 const DRILL_KEYS: Record<Dimension, readonly string[]> = {
@@ -77,6 +119,8 @@ export function parseState(params: URLSearchParams): AppState {
     groupBy,
     measure,
     drilldown,
+    view: parseView(params.get("view")),
+    selected: parseSelected(params.get("sel")),
   };
 }
 
@@ -94,5 +138,7 @@ export function serializeState(state: AppState): string {
     params.set("measure", state.measure);
   if (state.drilldown)
     params.set("drill", `${state.drilldown.dim}:${state.drilldown.key}`);
+  if (state.view) params.set("view", serializeView(state.view));
+  if (state.selected.length) params.set("sel", state.selected.join(","));
   return params.toString();
 }

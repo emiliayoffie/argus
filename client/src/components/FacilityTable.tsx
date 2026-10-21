@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Sort, SortKey } from "../domain/facilities";
 import {
   formatCount,
@@ -15,6 +16,13 @@ type Props = {
   onSort: (sort: Sort) => void;
   page: number;
   onPage: (page: number) => void;
+  // Highlighted facilities: click a row to toggle, shift+click to add a range
+  selected: string[];
+  onToggle: (code: string) => void;
+  onSelectRange: (codes: string[]) => void;
+  // The row to scroll into view when `locateRequest` changes ("More info" on the map)
+  locateCode: string | null;
+  locateRequest: number;
 };
 
 // Month- and year-precision dates get a ~ so they are not read as exact days
@@ -39,14 +47,43 @@ const COLUMNS: { key: SortKey | null; title: string }[] = [
 ];
 
 // One row per facility in the current selection. Badges show matching units
-// only; the "some units retired" note uses all units
+// only; the "some units retired" note uses all units. Rows can be highlighted
+// here and on the map; highlighting never changes the totals
 export function FacilityTable({
   facilities,
   sort,
   onSort,
   page,
   onPage,
+  selected,
+  onToggle,
+  onSelectRange,
+  locateCode,
+  locateRequest,
 }: Props) {
+  const locateRow = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (locateRequest > 0)
+      locateRow.current?.scrollIntoView({
+        block: "center",
+        behavior: "smooth",
+      });
+  }, [locateRequest]);
+
+  // Anchor for shift+click ranges, in the current sort order
+  const anchor = useRef<string | null>(null);
+  const clickRow = (code: string, shift: boolean) => {
+    const from = facilities.findIndex((f) => f.code === anchor.current);
+    const to = facilities.findIndex((f) => f.code === code);
+    if (shift && from >= 0 && to >= 0) {
+      const [lo, hi] = from < to ? [from, to] : [to, from];
+      onSelectRange(facilities.slice(lo, hi + 1).map((f) => f.code));
+    } else {
+      onToggle(code);
+    }
+    anchor.current = code;
+  };
+
   const pageCount = Math.max(1, Math.ceil(facilities.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
   const start = current * PAGE_SIZE;
@@ -102,7 +139,24 @@ export function FacilityTable({
           </thead>
           <tbody>
             {visible.map((f) => (
-              <tr key={f.code}>
+              <tr
+                key={f.code}
+                ref={f.code === locateCode ? locateRow : undefined}
+                className={selected.includes(f.code) ? "selected" : undefined}
+                aria-selected={selected.includes(f.code)}
+                tabIndex={0}
+                onClick={(e) => clickRow(f.code, e.shiftKey)}
+                onMouseDown={(e) => {
+                  // No text selection on shift+click
+                  if (e.shiftKey) e.preventDefault();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    clickRow(f.code, e.shiftKey);
+                  }
+                }}
+              >
                 <td>
                   <span className="name">{f.name}</span>
                   <span className="muted code">{f.code}</span>

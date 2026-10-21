@@ -182,7 +182,97 @@ main {
   gap: 0.75rem;
 }
 
+/* Results: map + table */
+
+.results {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.results-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.results-header h2 {
+  font-size: 1.1rem;
+  margin-right: auto;
+}
+
+.chip {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.chip-selected {
+  background: #efeaf7;
+  border-color: #7f6bb0;
+}
+
+.map {
+  margin: 0;
+}
+
+.map-canvas {
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.map figcaption {
+  margin-top: 0.4rem;
+}
+
+.leaflet-container,
+.leaflet-tooltip {
+  font: inherit;
+}
+
+.leaflet-tooltip {
+  font-size: 0.85rem;
+}
+
+.leaflet-popup-content {
+  margin: 0.6rem 0.8rem;
+  line-height: 1.4;
+}
+
+.popup-locate {
+  margin: 0.2rem 0 0.3rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7f6bb0;
+  border-color: #7f6bb0;
+  background: transparent;
+}
+
 /* Table */
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover td {
+  background: var(--ivory);
+}
+
+tr.selected td,
+tr.selected:hover td {
+  background: #efeaf7;
+}
+
+tr.selected td:first-child {
+  box-shadow: inset 3px 0 0 #7f6bb0;
+}
+
+tbody tr:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
 
 .table-wrap {
   overflow-x: auto;

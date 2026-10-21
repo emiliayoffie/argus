@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { EMPTY_FILTERS } from "../domain/filter";
 import {
   label,
   STATES,
@@ -13,6 +12,9 @@ import { SEARCH_MAX_LENGTH } from "../domain/url";
 type Props = {
   filters: Filters;
   onChange: (filters: Filters) => void;
+  // One reset for the whole view (filters, breakdown, highlights, sort, map)
+  onReset: () => void;
+  canReset: boolean;
   disabled: boolean;
 };
 
@@ -54,13 +56,14 @@ function FacetGroup<T extends string>({
 }
 
 // Base filters: OR within a group, AND across groups, plus a name search
-export function FilterBar({ filters, onChange, disabled }: Props) {
+export function FilterBar({
+  filters,
+  onChange,
+  onReset,
+  canReset,
+  disabled,
+}: Props) {
   const searchId = useId();
-  const isEmpty =
-    filters.states.length === 0 &&
-    filters.techGroups.length === 0 &&
-    filters.statuses.length === 0 &&
-    filters.search === "";
   return (
     <section className="toolbar" aria-labelledby="filters-heading">
       <h2 id="filters-heading" className="visually-hidden">
@@ -103,10 +106,10 @@ export function FilterBar({ filters, onChange, disabled }: Props) {
         />
         <button
           type="button"
-          onClick={() => onChange(EMPTY_FILTERS)}
-          disabled={disabled || isEmpty}
+          onClick={onReset}
+          disabled={disabled || !canReset}
         >
-          Reset filters
+          Reset view
         </button>
         <p className="muted">
           Groups combine: a facility is listed when one of its units matches
