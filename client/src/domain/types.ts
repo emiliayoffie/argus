@@ -1,5 +1,4 @@
-// App-owned vocabulary. Each list is `as const` so the union type is derived
-// from the array and the two can never disagree.
+// App-owned vocabulary
 
 export const STATES = [
   "QLD",
@@ -58,6 +57,9 @@ export type UnitRow = {
   // Raw `status_id`.
   rawStatus: string;
   dispatchType: string;
+  // Whether this unit's registered capacity counts toward MW totals; see
+  // `isMwEligible` in normalize.ts. Independent of whether capacity is known.
+  mwEligible: boolean;
   // `capacity_registered`; `null` means unknown, never 0.
   capacityMw: number | null;
   // `capacity_storage` in MWh (batteries).
