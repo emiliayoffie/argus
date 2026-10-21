@@ -1,37 +1,46 @@
-import { useEffect, useState } from "react";
 import "./App.css";
+import { ERROR_COPY, useFacilities, type Dataset } from "./api/useFacilities";
+import { summarize } from "./domain/aggregate";
+import { formatCount, formatInstant, formatMw } from "./domain/format";
 
-function App() {
-  const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let abort = false;
-
-    fetch("/api/message").then(async (res) => {
-      if (res.ok) {
-        const body = await res.json();
-        if (abort) {
-          return;
-        }
-        setMessage(body.message);
-      }
-    });
-
-    return () => {
-      abort = true;
-    };
-  }, []);
-
+function Headline({ data }: { data: Dataset }) {
+  const summary = summarize(data.rows);
   return (
-    <>
-      <h1>RenewMap code challenge</h1>
-      <p className="read-the-docs">
-        This is the starter repository for the code challenge provided to you by
-        the interviewer.
+    <section>
+      <p>
+        {formatCount(summary.facilityCount)} facilities ·{" "}
+        {formatCount(summary.unitCount)} units · {formatMw(summary.totalMw)}{" "}
+        registered
       </p>
-      <div className="card">{message || "🌀🌀🌀"}</div>
-    </>
+      <p className="muted">Fetched {formatInstant(data.fetchedAt)}</p>
+    </section>
   );
 }
 
-export default App;
+export default function App() {
+  const { result, retry } = useFacilities();
+  return (
+    <main>
+      <header>
+        <h1>Argus</h1>
+        <p>Australian energy facilities, from OpenElectricity</p>
+      </header>
+      {result.status === "loading" && (
+        <p role="status" aria-live="polite">
+          Loading facilities from OpenElectricity…
+        </p>
+      )}
+      {result.status === "error" && (
+        <div role="alert">
+          <p>{ERROR_COPY[result.code].text}</p>
+          {ERROR_COPY[result.code].retryable && (
+            <button type="button" onClick={retry}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+      {result.status === "ready" && <Headline data={result.data} />}
+    </main>
+  );
+}
