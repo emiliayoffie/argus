@@ -3,7 +3,7 @@ import "./App.css";
 import { ERROR_COPY, useFacilities } from "./api/useFacilities";
 import { BreakdownPanel } from "./components/BreakdownPanel";
 import { FacilityTable } from "./components/FacilityTable";
-import { EMPTY_FILTERS, FilterBar } from "./components/FilterBar";
+import { FilterBar } from "./components/FilterBar";
 import { SummaryStrip } from "./components/SummaryStrip";
 import { groupBy, summarize } from "./domain/aggregate";
 import {
@@ -17,20 +17,23 @@ import { applyDrilldown, applyFilters } from "./domain/filter";
 import { formatCount, formatInstant } from "./domain/format";
 import {
   label,
+  type AppState,
   type Dimension,
   type Drilldown,
   type Filters,
-  type Measure,
 } from "./domain/types";
+import { parseState, serializeState } from "./domain/url";
 
 export default function App() {
   const { result, retry } = useFacilities();
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [dim, setDim] = useState<Dimension>("techGroup");
-  const [measure, setMeasure] = useState<Measure>("mw");
-  const [drilldown, setDrilldown] = useState<Drilldown>(null);
+  // The view is read from the URL once, on mount, and written back from the
+  // event handlers below. There is no effect watching either side
+  const [state, setState] = useState<AppState>(() =>
+    parseState(new URLSearchParams(window.location.search)),
+  );
   const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
+  const { filters, groupBy: dim, measure, drilldown } = state;
 
   // Everything below is derived from the state above; no second copy of the
   // data is kept. `base` feeds the bars; `shown` is base narrowed by a bar
@@ -50,23 +53,27 @@ export default function App() {
       )
     : [];
 
+  // Every view change goes through here so the URL always matches the screen.
+  // replaceState, not pushState: Back should leave the app, not undo a click
+  const update = (next: AppState) => {
+    setState(next);
+    setPage(0);
+    const query = serializeState(next);
+    window.history.replaceState(
+      null,
+      "",
+      query ? `?${query}` : location.pathname,
+    );
+  };
+
   // A drilldown only makes sense against the bars it was clicked on, so any
-  // change to the filters or grouping clears it. Anything that changes which
-  // facilities are listed also goes back to the first page
-  const changeFilters = (next: Filters) => {
-    setFilters(next);
-    setDrilldown(null);
-    setPage(0);
-  };
-  const changeDim = (next: Dimension) => {
-    setDim(next);
-    setDrilldown(null);
-    setPage(0);
-  };
-  const changeDrilldown = (next: Drilldown) => {
-    setDrilldown(next);
-    setPage(0);
-  };
+  // change to the filters or grouping clears it
+  const changeFilters = (next: Filters) =>
+    update({ ...state, filters: next, drilldown: null });
+  const changeDim = (next: Dimension) =>
+    update({ ...state, groupBy: next, drilldown: null });
+  const changeDrilldown = (next: Drilldown) =>
+    update({ ...state, drilldown: next });
   const changeSort = (next: Sort) => {
     setSort(next);
     setPage(0);
@@ -112,7 +119,7 @@ export default function App() {
             measure={measure}
             selectedKey={drilldown?.key ?? null}
             onGroupBy={changeDim}
-            onMeasure={setMeasure}
+            onMeasure={(next) => update({ ...state, measure: next })}
             onSelect={(key) =>
               changeDrilldown(drilldown?.key === key ? null : { dim, key })
             }

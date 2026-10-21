@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { EMPTY_FILTERS } from "../domain/filter";
 import {
   label,
   STATES,
@@ -7,13 +8,7 @@ import {
   type Dimension,
   type Filters,
 } from "../domain/types";
-
-export const EMPTY_FILTERS: Filters = {
-  states: [],
-  techGroups: [],
-  statuses: [],
-  search: "",
-};
+import { SEARCH_MAX_LENGTH } from "../domain/url";
 
 type Props = {
   filters: Filters;
@@ -102,6 +97,7 @@ export function FilterBar({ filters, onChange, disabled }: Props) {
           type="search"
           placeholder="Facility name or code"
           value={filters.search}
+          maxLength={SEARCH_MAX_LENGTH}
           disabled={disabled}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
         />
