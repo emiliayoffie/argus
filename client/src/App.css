@@ -11,45 +11,140 @@ main {
   letter-spacing: 0.02em;
 }
 
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.examples a {
+  color: var(--accent);
+}
+
+footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+footer a {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 1rem;
+  }
+
+  .bar {
+    grid-template-columns: 6rem 1fr 4.5rem;
+  }
+
+  .map-canvas {
+    height: 300px;
+  }
+}
+
 /* Filters */
 
+/* Sticks to the top while scrolling; the z-index sits above Leaflet's panes */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--paper);
+  align-items: center;
+  gap: 0.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  margin: 0 -1rem;
+  padding: 0.6rem 1rem;
+  background: color-mix(in srgb, var(--ivory) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+
+.menu {
+  position: relative;
+}
+
+.menu summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.35rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  background: var(--paper);
+  user-select: none;
 }
 
-.facet {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 9rem;
+.menu summary::-webkit-details-marker {
+  display: none;
 }
 
-.facet legend,
-.toolbar-search label {
+.menu summary:hover,
+.menu[open] summary {
+  border-color: var(--ink);
+}
+
+.menu.active summary {
+  border-color: #7f6bb0;
+  background: #efeaf7;
   font-weight: 600;
-  margin-bottom: 0.4rem;
+}
+
+.menu-count {
+  display: inline-block;
+  min-width: 1.3em;
+  margin-left: 0.35rem;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: #7f6bb0;
+  color: #fff;
+  font-size: 0.75rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 1000;
+  min-width: 12rem;
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 6px 20px rgba(43, 38, 34, 0.12);
+}
+
+.menu-panel label {
+  display: block;
+  padding: 0.15rem 0;
+  white-space: nowrap;
+}
+
+.menu-clear {
+  margin-top: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.menu-hint {
+  margin: 0.5rem 0 0;
+  max-width: 16rem;
+  white-space: normal;
+  font-size: 0.78rem;
 }
 
 .toolbar-search {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
   flex: 1 1 14rem;
-}
-
-.toolbar-search input {
+  min-width: 10rem;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  background: var(--paper);
 }
 
 /* Summary */

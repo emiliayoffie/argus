@@ -37,6 +37,22 @@ const FacilityMap = lazy(() => import("./components/FacilityMap"));
 // A stable empty array so memoized derivations don't rerun while loading
 const NO_ROWS: UnitRow[] = [];
 
+// The three customer questions as plain URL states: a starting point, not a mode
+const EXAMPLES: { question: string; query: string }[] = [
+  {
+    question: "Batteries recently online in NSW and QLD",
+    query: "state=NSW,QLD&tech=battery&status=commissioning,operating",
+  },
+  {
+    question: "Committed wind, solar and battery capacity, state by state",
+    query: "tech=solar,wind,battery&status=committed&by=state",
+  },
+  {
+    question: "The fossil fleet: what has retired and what still runs",
+    query: "tech=coal,gas,distillate&by=status&measure=facilities",
+  },
+];
+
 export default function App() {
   const { result, retry } = useFacilities();
   // The view is read from the URL once, on mount, and written back from the
@@ -171,6 +187,27 @@ export default function App() {
 
       {data && (
         <>
+          <nav className="examples" aria-labelledby="examples-label">
+            <p id="examples-label" className="muted">
+              Start from a question
+            </p>
+            {EXAMPLES.map((e) => (
+              <a
+                key={e.query}
+                href={`?${e.query}`}
+                onClick={(event) => {
+                  // Same as following the link, without a full page reload
+                  event.preventDefault();
+                  update(parseState(new URLSearchParams(e.query)));
+                  setSort(DEFAULT_SORT);
+                  setResetRequest((n) => n + 1);
+                }}
+              >
+                {e.question}
+              </a>
+            ))}
+          </nav>
+
           <BreakdownPanel
             groups={groups}
             groupBy={dim}
@@ -268,14 +305,21 @@ export default function App() {
               />
             )}
           </section>
-
-          <p className="muted">
-            {formatCount(data.rows.length)} units in the full dataset · fetched{" "}
-            {formatInstant(data.fetchedAt)} · source dated{" "}
-            {formatInstant(data.sourceCreatedAt)}
-          </p>
         </>
       )}
+
+      <footer className="muted">
+        Source: <a href="https://openelectricity.org.au">OpenElectricity</a>
+        {data && (
+          <>
+            {" "}
+            · {formatCount(data.rows.length)} units in the full dataset · data
+            as of {formatInstant(data.sourceCreatedAt)} · fetched{" "}
+            {formatInstant(data.fetchedAt)}
+          </>
+        )}
+        . Statuses are registry classifications, not live availability.
+      </footer>
     </main>
   );
 }
