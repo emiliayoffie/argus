@@ -1,43 +1,107 @@
-#root {
-  max-width: 1280px;
+main {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.25rem;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.masthead h1 {
+  font-size: 1.75rem;
+  letter-spacing: 0.02em;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Filters */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.facet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 9rem;
+}
+
+.facet legend,
+.toolbar-search label {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.toolbar-search {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1 1 14rem;
+}
+
+.toolbar-search input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Summary */
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
 }
 
 .card {
-  padding: 2em;
-  font-weight: bold;
+  padding: 1rem;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
-.read-the-docs {
-  color: #888;
+.card h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.card .value {
+  font-size: 1.75rem;
+  font-weight: 600;
+}
+
+.card .split,
+.card details {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.card summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+/* Status and error */
+
+.status {
+  padding: 1rem;
+  color: var(--muted);
+}
+
+.banner-error {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
 }
