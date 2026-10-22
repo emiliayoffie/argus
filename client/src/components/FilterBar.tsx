@@ -114,8 +114,12 @@ function FilterMenu<T extends string>({
       }}
       onKeyDown={onKeyDown}
       onBlur={(e) => {
-        // Focus left the whole menu (Tab out): close without stealing focus back
-        if (!e.currentTarget.contains(e.relatedTarget)) close(false);
+        // Focus moved to something outside the menu (Tab out): close without
+        // stealing focus back. A blur with no target is ignored: iOS Safari
+        // doesn't focus a tapped checkbox, so closing here would swallow the tap.
+        // Taps outside are handled by the document pointerdown listener
+        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
+          close(false);
       }}
     >
       <summary

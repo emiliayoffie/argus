@@ -116,7 +116,7 @@ export function useFacilities(): {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const controller = new AbortController();
+    const controller = new AbortController(); // handles race conditions
     void (async () => {
       const next = await load(controller.signal).catch(
         (): FacilitiesResult => ({ status: "error", code: "internal_error" }),

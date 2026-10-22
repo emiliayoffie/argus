@@ -57,7 +57,7 @@ function fail(
 ) {
   const { status, message } = ERRORS[code];
   log({ route: c.req.path, error: code, ...fields });
-  // Never let a browser or CDN cache an error; a retry must hit upstream again.
+  // prevents letting a browser or CDN from caching an error; a retry must hit upstream again
   c.header("Cache-Control", "no-store");
   return c.json<ErrorResponse>({ error: { code, message } }, status);
 }
