@@ -15,6 +15,7 @@ import {
 } from "./domain/facilities";
 import { applyDrilldown, applyFilters } from "./domain/filter";
 import { formatCount, formatInstant, formatMw } from "./domain/format";
+import { headline } from "./domain/headline";
 import {
   label,
   type AppState,
@@ -208,6 +209,15 @@ export default function App() {
             ))}
           </nav>
 
+          <p className="headline">
+            {headline(
+              state,
+              summary,
+              drilldown ? label(drilldown.dim, drilldown.key) : null,
+            )}
+          </p>
+          <SummaryStrip summary={summary} />
+
           <BreakdownPanel
             groups={groups}
             groupBy={dim}
@@ -219,7 +229,6 @@ export default function App() {
               changeDrilldown(drilldown?.key === key ? null : { dim, key })
             }
           />
-          <SummaryStrip summary={summary} />
 
           <section className="results" aria-labelledby="results-heading">
             <div className="results-header">
