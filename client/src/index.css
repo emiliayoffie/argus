@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --ink: #2b2622;
   --muted: #6c5f58;
   --border: #ddd4ca;
@@ -6,6 +7,9 @@
   --ivory: #faf8f4;
   --accent: #d8432b;
   --accent-soft: #fcefeb;
+  --lavender: #7f6bb0;
+  --lavender-soft: #efeaf7;
+  --shadow: rgba(43, 38, 34, 0.12);
   --radius: 6px;
 
   font-family:
@@ -19,6 +23,20 @@
   line-height: 1.45;
   color: var(--ink);
   background: var(--ivory);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #ebdbb2;
+  --muted: #a89984;
+  --border: #504945;
+  --paper: #32302f;
+  --ivory: #282828;
+  --accent: #8fd3c5;
+  --accent-soft: #3c3836;
+  --lavender: #d3869b;
+  --lavender-soft: #3c3836;
+  --shadow: rgba(0, 0, 0, 0.45);
 }
 
 * {

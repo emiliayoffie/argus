@@ -165,6 +165,8 @@ export default function FacilityMap({
         scrollWheelZoom={false}
         zoomSnap={0}
         zoomDelta={0.5}
+        // One canvas instead of one SVG element per marker; much lighter with hundreds of facilities
+        preferCanvas
         className="map-canvas"
       >
         <TileLayer

@@ -31,6 +31,7 @@ import {
   serializeState,
   toggleSelected,
 } from "./domain/url";
+import { useTheme } from "./theme";
 
 // Leaflet is only downloaded when the map is first shown
 const FacilityMap = lazy(() => import("./components/FacilityMap"));
@@ -56,6 +57,7 @@ const EXAMPLES: { question: string; query: string }[] = [
 
 export default function App() {
   const { result, retry } = useFacilities();
+  const { theme, toggle: toggleTheme } = useTheme();
   // The view is read from the URL once, on mount, and written back from the
   // event handlers below; there's no effect watching either side
   const [state, setState] = useState<AppState>(() =>
@@ -155,7 +157,33 @@ export default function App() {
   return (
     <main>
       <header className="masthead">
-        <h1>Argus</h1>
+        <h1>
+          <a
+            href="/"
+            onClick={(event) => {
+              event.preventDefault();
+              resetAll();
+            }}
+          >
+            Argus
+          </a>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+            title={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+          >
+            <span
+              className={theme === "dark" ? "moon crescent" : "moon"}
+              aria-hidden="true"
+            />
+          </button>
+        </h1>
         <p className="muted">
           Australian energy facilities, from OpenElectricity
         </p>
