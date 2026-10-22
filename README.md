@@ -1,7 +1,5 @@
 # Argus
 
-_See beyond the numbers._
-
 Argus is a prototype that uses the [OpenElectricity](https://openelectricity.org.au) Facilities API to answer questions about Australia's generation and storage fleet: what's operating, what's coming, what's closing, and how much capacity that adds up to.
 
 The name comes from Argus Panoptes, the many-eyed watchman in Greek myth. The goal is to help people see the whole fleet at once and then look closely at the facilities behind any number. Monitoring changes over time is the natural next step.
@@ -99,21 +97,24 @@ Errors return `{ error: { code, message } }` with `Cache-Control: no-store`:
 - Dates keep their precision. Year or month dates are shown with a `~`. Expected closure dates aren't shown: most are decades-out placeholders.
 - Facilities without coordinates still appear in the table and in every total.
 
-## Limitations and next steps
+## Limitations
 
-- Back/forward don't step through views (the URL is replaced, not pushed). Map markers overlap at low zoom. Browser testing is manual.
-- Before deploying: a 15-minute edge cache, a rate limit, the token in `wrangler secret`, and a licence check. The endpoint is unauthenticated and uses my API quota.
-- Observability is one structured log line per Worker request (status, duration, counts, error code; never the token or bodies). Deploying would add metrics, alerting and client error reporting.
-- Stretch: expandable unit rows, a date-range filter, side-by-side portfolio comparison, data-completeness indicators (e.g. share of committed MW with a published expected date), CSV export, a Playwright smoke test.
-- Later: saved views and portfolios; ingesting public project announcements and linking them to facilities, keeping reported claims distinct from registry facts; and historical snapshots, below.
+- Map markers can overlap at low zoom, and browser back/forward navigation doesn't step through previous views.
+- Browser testing is currently manual, with automated tests covering domain logic and API behavior.
+- Argus uses a current snapshot of facility data, so it can't show how projects have changed over time.
+- A public deployment would need additional API quota protection and a review of data licensing.
 
-### Historical snapshots and change detection
+## Next steps
 
-Capture OpenElectricity data periodically to answer questions the current snapshot alone can't:
+### Stretch goals
 
-- Which battery projects became operational this month?
-- Which projects changed their expected commissioning dates?
-- How much capacity moved from committed to operating?
-- Which facilities changed registered capacity?
+- Expand facilities to show individual units and their details.
+- Add date-range filters and data-completeness indicators.
+- Compare portfolios side by side and export results to CSV.
+- Add Playwright tests for key user workflows.
 
-This could grow into a facility change feed and customer alerts.
+### Longer term
+
+Argus could evolve into a monitoring tool with saved portfolios, historical data, and alerts when facility statuses, capacities, or commissioning dates change.
+
+It could also bring in news and announcements about energy projects to help users understand what's happening at each facility.
