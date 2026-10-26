@@ -1,0 +1,6 @@
+.yarn/
+yarn.lock
+**/dist/
+**/.wrangler/
+.idea/
+.vscode/

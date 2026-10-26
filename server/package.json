@@ -1,12 +1,13 @@
 {
-	"name": "server",
-	"scripts": {
-		"dev": "wrangler dev"
-	},
-	"dependencies": {
-		"hono": "^4.8.3"
-	},
-	"devDependencies": {
-		"wrangler": "latest"
-	}
+  "name": "server",
+  "scripts": {
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "hono": "^4.8.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  }
 }

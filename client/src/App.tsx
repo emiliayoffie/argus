@@ -1,38 +1,362 @@
-import {useEffect, useState} from 'react'
-import './App.css'
+import { lazy, Suspense, useMemo, useState } from "react";
+import "./App.css";
+import { ERROR_COPY, useFacilities } from "./api/useFacilities";
+import { BreakdownPanel } from "./components/BreakdownPanel";
+import { FacilityTable, PAGE_SIZE } from "./components/FacilityTable";
+import { FilterBar } from "./components/FilterBar";
+import { SummaryStrip } from "./components/SummaryStrip";
+import { groupBy, summarize } from "./domain/aggregate";
+import {
+  DEFAULT_SORT,
+  facilityLifecycle,
+  groupByFacility,
+  sortFacilities,
+  type Sort,
+} from "./domain/facilities";
+import { applyDrilldown, applyFilters } from "./domain/filter";
+import { formatCount, formatInstant, formatMw } from "./domain/format";
+import { headline } from "./domain/headline";
+import {
+  label,
+  type AppState,
+  type Dimension,
+  type Drilldown,
+  type Filters,
+  type UnitRow,
+} from "./domain/types";
+import {
+  DEFAULT_STATE,
+  MAX_SELECTED,
+  parseState,
+  serializeState,
+  toggleSelected,
+} from "./domain/url";
+import { useTheme } from "./theme";
 
-function App() {
-  const [message, setMessage] = useState<string | null>(null);
+// Leaflet is only downloaded when the map is first shown
+const FacilityMap = lazy(() => import("./components/FacilityMap"));
 
-    useEffect(() => {
-        let abort = false;
+// A stable empty array so memoized derivations don't rerun while loading
+const NO_ROWS: UnitRow[] = [];
 
-        fetch("/api/message").then(async (res) => {
-            if (res.ok) {
-                const body = await res.json();
-                if (abort) {
-                    return;
-                }
-                setMessage(body.message);
-            }
-        });
+// The three customer questions as plain URL states: a starting point, not a mode
+const EXAMPLES: { question: string; query: string }[] = [
+  {
+    question: "Batteries recently online in NSW and QLD",
+    query: "state=NSW,QLD&tech=battery&status=commissioning,operating",
+  },
+  {
+    question: "Committed wind, solar and battery capacity, state by state",
+    query: "tech=solar,wind,battery&status=committed&by=state",
+  },
+  {
+    question: "The fossil fleet: what has retired and what still runs",
+    query: "tech=coal,gas,distillate&by=status&measure=facilities",
+  },
+];
 
-        return () => {
-            abort = true;
-        }
-    }, []);
+export default function App() {
+  const { result, retry } = useFacilities();
+  const { theme, toggle: toggleTheme } = useTheme();
+  // The view is read from the URL once, on mount, and written back from the
+  // event handlers below; there's no effect watching either side
+  const [state, setState] = useState<AppState>(() =>
+    parseState(new URLSearchParams(window.location.search)),
+  );
+  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
+  const [page, setPage] = useState(0);
+  const [showMap, setShowMap] = useState(true);
+  // "More info" in a map popup: which row to scroll to, and a counter so the
+  // same row can be located twice
+  const [locate, setLocate] = useState({ code: "", request: 0 });
+  // Bumped by Reset so the map refits even if the facilities didn't change
+  const [resetRequest, setResetRequest] = useState(0);
+  const { filters, groupBy: dim, measure, drilldown } = state;
+
+  // Everything below is derived from the state above; no second copy of the
+  // data is kept. `base` feeds the bars; `shown` is base narrowed by a bar.
+  // Memoized for stable identity, not speed: the map refits whenever the
+  // `facilities` array changes, so it must not be a new array every render
+  const data = result.status === "ready" ? result.data : null;
+  const rows = data?.rows ?? NO_ROWS;
+  const asOf = data?.sourceCreatedAt ?? "";
+  const lifecycle = useMemo(() => facilityLifecycle(rows), [rows]);
+  const base = useMemo(() => applyFilters(rows, filters), [rows, filters]);
+  const shown = useMemo(
+    () => applyDrilldown(base, drilldown),
+    [base, drilldown],
+  );
+  const summary = summarize(shown);
+  const groups = groupBy(base, dim, measure);
+  const facilities = useMemo(
+    () => sortFacilities(groupByFacility(shown, lifecycle, asOf), sort),
+    [shown, lifecycle, asOf, sort],
+  );
+
+  // Every view change goes through here so the URL always matches the screen.
+  // replaceState, not pushState: Back should leave the app, not undo a click
+  const writeUrl = (next: AppState) => {
+    const query = serializeState(next);
+    window.history.replaceState(
+      null,
+      "",
+      query ? `?${query}` : location.pathname,
+    );
+  };
+  const update = (next: AppState) => {
+    setState(next);
+    setPage(0);
+    writeUrl(next);
+  };
+  // Map pans and highlighting don't change what's listed, so the page stays
+  const patch = (
+    partial: Pick<AppState, "view"> | Pick<AppState, "selected">,
+  ) => {
+    const next = { ...state, ...partial };
+    setState(next);
+    writeUrl(next);
+  };
+
+  // A drilldown only makes sense against the bars it was clicked on, so any
+  // change to the filters or grouping clears it
+  const changeFilters = (next: Filters) =>
+    update({ ...state, filters: next, drilldown: null });
+  const changeDim = (next: Dimension) =>
+    update({ ...state, groupBy: next, drilldown: null });
+  const changeDrilldown = (next: Drilldown) =>
+    update({ ...state, drilldown: next });
+  const changeSort = (next: Sort) => {
+    setSort(next);
+    setPage(0);
+  };
+  const resetAll = () => {
+    update(DEFAULT_STATE);
+    setSort(DEFAULT_SORT);
+    setShowMap(true);
+    setResetRequest((n) => n + 1);
+  };
+  const isDefault = serializeState(state) === "" && sort === DEFAULT_SORT;
+
+  // Highlight set: a comparison aid shared via the URL, never a filter
+  const toggle = (code: string) =>
+    patch({ selected: toggleSelected(state.selected, code) });
+  const selectRange = (codes: string[]) =>
+    patch({
+      selected: [...new Set([...state.selected, ...codes])].slice(
+        -MAX_SELECTED,
+      ),
+    });
+  const selectedShown = facilities.filter((f) =>
+    state.selected.includes(f.code),
+  );
+  const selectedMw = selectedShown.reduce(
+    (sum, f) => sum + (f.matchingMw ?? 0),
+    0,
+  );
 
   return (
-      <>
-          <h1>RenewMap code challenge</h1>
-          <p className="read-the-docs">
-              This is the starter repository for the code challenge provided to you by the interviewer.
-          </p>
-          <div className="card">
-              {message || "🌀🌀🌀"}
-          </div>
-      </>
-  )
-}
+    <main>
+      <header className="masthead">
+        <h1>
+          <a
+            href="/"
+            onClick={(event) => {
+              event.preventDefault();
+              resetAll();
+            }}
+          >
+            Argus
+          </a>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+            title={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+          >
+            <span
+              className={theme === "dark" ? "moon crescent" : "moon"}
+              aria-hidden="true"
+            />
+          </button>
+        </h1>
+        <p className="muted">
+          Australian energy facilities, from OpenElectricity
+        </p>
+      </header>
 
-export default App
+      <FilterBar
+        filters={filters}
+        onChange={changeFilters}
+        onReset={resetAll}
+        canReset={!isDefault}
+        disabled={result.status === "loading"}
+      />
+
+      {result.status === "loading" && (
+        <p className="status" role="status" aria-live="polite">
+          Loading facilities from OpenElectricity…
+        </p>
+      )}
+
+      {result.status === "error" && (
+        <div className="banner-error" role="alert">
+          <p>{ERROR_COPY[result.code].text}</p>
+          {ERROR_COPY[result.code].retryable && (
+            <button type="button" onClick={retry}>
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      {data && (
+        <>
+          <nav className="examples" aria-labelledby="examples-label">
+            <p id="examples-label" className="muted">
+              Start from a question
+            </p>
+            {EXAMPLES.map((e) => (
+              <a
+                key={e.query}
+                href={`?${e.query}`}
+                onClick={(event) => {
+                  // Same as following the link, without a full page reload
+                  event.preventDefault();
+                  update(parseState(new URLSearchParams(e.query)));
+                  setSort(DEFAULT_SORT);
+                  setResetRequest((n) => n + 1);
+                }}
+              >
+                {e.question}
+              </a>
+            ))}
+          </nav>
+
+          <p className="headline">
+            {headline(
+              state,
+              summary,
+              drilldown ? label(drilldown.dim, drilldown.key) : null,
+            )}
+          </p>
+          <SummaryStrip summary={summary} />
+
+          <BreakdownPanel
+            groups={groups}
+            groupBy={dim}
+            measure={measure}
+            selectedKey={drilldown?.key ?? null}
+            onGroupBy={changeDim}
+            onMeasure={(next) => update({ ...state, measure: next })}
+            onSelect={(key) =>
+              changeDrilldown(drilldown?.key === key ? null : { dim, key })
+            }
+          />
+
+          <section className="results" aria-labelledby="results-heading">
+            <div className="results-header">
+              <h2 id="results-heading">Facilities</h2>
+              {drilldown && (
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => changeDrilldown(null)}
+                  aria-label={`Clear selection ${label(drilldown.dim, drilldown.key)}`}
+                >
+                  Showing: {label(drilldown.dim, drilldown.key)}{" "}
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+              {state.selected.length > 0 && (
+                <button
+                  type="button"
+                  className="chip chip-selected"
+                  onClick={() => patch({ selected: [] })}
+                  aria-label={`Clear ${state.selected.length} highlighted facilities`}
+                  title="Highlighted facilities are marked on the map and in the table; totals are unaffected"
+                >
+                  {formatCount(state.selected.length)} highlighted
+                  {selectedShown.length > 0 && ` · ${formatMw(selectedMw)}`}
+                  {selectedShown.length < state.selected.length &&
+                    ` (${formatCount(selectedShown.length)} in view)`}{" "}
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+              <button
+                type="button"
+                aria-pressed={showMap}
+                onClick={() => setShowMap((on) => !on)}
+              >
+                {showMap ? "Hide map" : "Show map"}
+              </button>
+            </div>
+
+            {showMap && facilities.length > 0 && (
+              <Suspense fallback={<p className="status">Loading map…</p>}>
+                <FacilityMap
+                  facilities={facilities}
+                  view={state.view}
+                  resetRequest={resetRequest}
+                  onViewChange={(view) => patch({ view })}
+                  selected={state.selected}
+                  onToggle={toggle}
+                  onLocate={(code) => {
+                    if (!state.selected.includes(code)) toggle(code);
+                    const index = facilities.findIndex((f) => f.code === code);
+                    if (index >= 0) setPage(Math.floor(index / PAGE_SIZE));
+                    setLocate((l) => ({ code, request: l.request + 1 }));
+                  }}
+                />
+              </Suspense>
+            )}
+
+            {facilities.length === 0 ? (
+              <div className="status">
+                <p>
+                  No units match the current filters
+                  {filters.search && ` and search “${filters.search}”`}.
+                </p>
+                {!isDefault && (
+                  <button type="button" onClick={resetAll}>
+                    Reset view
+                  </button>
+                )}
+              </div>
+            ) : (
+              <FacilityTable
+                facilities={facilities}
+                sort={sort}
+                onSort={changeSort}
+                page={page}
+                onPage={setPage}
+                selected={state.selected}
+                onToggle={toggle}
+                onSelectRange={selectRange}
+                locateCode={locate.code}
+                locateRequest={locate.request}
+              />
+            )}
+          </section>
+        </>
+      )}
+
+      <footer className="muted">
+        Source: <a href="https://openelectricity.org.au">OpenElectricity</a>
+        {data && (
+          <>
+            {" "}
+            · {formatCount(data.rows.length)} units in the full dataset · data
+            as of {formatInstant(data.sourceCreatedAt)} · fetched{" "}
+            {formatInstant(data.fetchedAt)}
+          </>
+        )}
+        . Statuses are registry classifications, not live availability.
+      </footer>
+    </main>
+  );
+}

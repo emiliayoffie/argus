@@ -7,14 +7,25 @@
     "server"
   ],
   "scripts": {
-    "test": "vitest",
-    "dev": "concurrently --kill-others-on-fail \"yarn workspace client dev\" \"yarn workspace server dev\""
+    "dev": "concurrently --kill-others-on-fail \"yarn workspace client dev\" \"yarn workspace server dev\"",
+    "lint": "eslint .",
+    "format:check": "prettier --check --ignore-unknown $(git ls-files -co --exclude-standard)",
+    "format": "prettier --write --ignore-unknown $(git ls-files -co --exclude-standard)",
+    "typecheck": "tsc -b client && tsc -p server/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "build": "yarn workspace client build",
+    "check": "yarn lint && yarn format:check && yarn typecheck && yarn test && yarn build"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250701.0",
+    "@eslint/js": "10.0.1",
     "concurrently": "^7.3.0",
     "dotenv": "^16.4.5",
+    "eslint": "10.12.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.9.10",
     "typescript": "^5.5.3",
+    "typescript-eslint": "8.71.1",
     "vitest": "^2.1.8",
     "yarn": "^1.22.19"
   },
