@@ -6,6 +6,7 @@ import {
   formatMwh,
   formatSourceDate,
   isApproximate,
+  monthsBefore,
 } from "./format";
 
 describe("formatSourceDate", () => {
@@ -77,5 +78,18 @@ describe("formatMwh and formatCount", () => {
     expect(formatMwh(194)).toBe("194 MWh");
     expect(formatMwh(12_000)).toBe("12.0 GWh");
     expect(formatCount(1146)).toBe("1,146");
+  });
+});
+
+describe("monthsBefore", () => {
+  it("subtracts whole months with year borrow", () => {
+    expect(monthsBefore("2026-10-22", 12)).toBe("2025-10-22");
+    expect(monthsBefore("2026-01-15", 6)).toBe("2025-07-15");
+  });
+
+  it("clamps to the target month's last day, leap-year aware", () => {
+    expect(monthsBefore("2028-02-29", 12)).toBe("2027-02-28");
+    expect(monthsBefore("2026-03-31", 1)).toBe("2026-02-28");
+    expect(monthsBefore("2024-03-31", 1)).toBe("2024-02-29");
   });
 });

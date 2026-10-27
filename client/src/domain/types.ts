@@ -109,6 +109,11 @@ export type UnitRow = {
   dataLastSeen: string | null;
 };
 
+// "Came online in the last N months" choices; only 12 is offered in the UI,
+// 6 and 24 are URL-only for now
+export const RECENT_MONTHS = [6, 12, 24] as const;
+export type RecentMonths = (typeof RECENT_MONTHS)[number] | null;
+
 // Base filters. Empty list = no constraint. OR within a facet, AND across.
 export type Filters = {
   states: State[];
@@ -116,6 +121,8 @@ export type Filters = {
   statuses: Status[];
   // Facility name or code, case-insensitive.
   search: string;
+  // Only units that came online within this many months of the dataset date
+  recentMonths: RecentMonths;
 };
 
 // Clicking a bar in the breakdown. Filters the rows one step further, after
@@ -125,8 +132,14 @@ export type Drilldown = { dim: Dimension; key: string } | null;
 // Where the map is looking; null means "fit to the current selection"
 export type MapView = { lat: number; lng: number; zoom: number } | null;
 
-// Everything that defines a view and belongs in the URL. Sort and page are
-// deliberately not here: they are how you look at a result, not what it is
+// Table sort order; part of AppState so a shared URL lands on the same order
+export const SORT_KEYS = ["name", "state", "mw", "units", "keyDate"] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+export type Sort = { key: SortKey; direction: "asc" | "desc" };
+export const DEFAULT_SORT: Sort = { key: "mw", direction: "desc" };
+
+// Everything that defines a view and belongs in the URL. The page index is
+// deliberately not here: it is how you look at a result, not what it is
 export type AppState = {
   filters: Filters;
   groupBy: Dimension;
@@ -136,6 +149,7 @@ export type AppState = {
   // Facility codes highlighted on the map and in the table. A highlight, not
   // a filter: totals never change
   selected: string[];
+  sort: Sort;
 };
 
 export type StatusMw = {

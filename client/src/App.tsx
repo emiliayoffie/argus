@@ -7,11 +7,9 @@ import { FilterBar } from "./components/FilterBar";
 import { SummaryStrip } from "./components/SummaryStrip";
 import { groupBy, summarize } from "./domain/aggregate";
 import {
-  DEFAULT_SORT,
   facilityLifecycle,
   groupByFacility,
   sortFacilities,
-  type Sort,
 } from "./domain/facilities";
 import { applyDrilldown, applyFilters } from "./domain/filter";
 import { formatCount, formatInstant, formatMw } from "./domain/format";
@@ -22,6 +20,7 @@ import {
   type Dimension,
   type Drilldown,
   type Filters,
+  type Sort,
   type UnitRow,
 } from "./domain/types";
 import {
@@ -43,7 +42,8 @@ const NO_ROWS: UnitRow[] = [];
 const EXAMPLES: { question: string; query: string }[] = [
   {
     question: "Batteries recently online in NSW and QLD",
-    query: "state=NSW,QLD&tech=battery&status=commissioning,operating",
+    query:
+      "state=NSW,QLD&tech=battery&status=commissioning,operating&by=status&sort=keyDate:desc&recent=12",
   },
   {
     question: "Committed wind, solar and battery capacity, state by state",
@@ -63,7 +63,6 @@ export default function App() {
   const [state, setState] = useState<AppState>(() =>
     parseState(new URLSearchParams(window.location.search)),
   );
-  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
   const [page, setPage] = useState(0);
   const [showMap, setShowMap] = useState(true);
   // "More info" in a map popup: which row to scroll to, and a counter so the
@@ -71,7 +70,7 @@ export default function App() {
   const [locate, setLocate] = useState({ code: "", request: 0 });
   // Bumped by Reset so the map refits even if the facilities didn't change
   const [resetRequest, setResetRequest] = useState(0);
-  const { filters, groupBy: dim, measure, drilldown } = state;
+  const { filters, groupBy: dim, measure, drilldown, sort } = state;
 
   // Everything below is derived from the state above; no second copy of the
   // data is kept. `base` feeds the bars; `shown` is base narrowed by a bar.
@@ -81,7 +80,10 @@ export default function App() {
   const rows = data?.rows ?? NO_ROWS;
   const asOf = data?.sourceCreatedAt ?? "";
   const lifecycle = useMemo(() => facilityLifecycle(rows), [rows]);
-  const base = useMemo(() => applyFilters(rows, filters), [rows, filters]);
+  const base = useMemo(
+    () => applyFilters(rows, filters, asOf),
+    [rows, filters, asOf],
+  );
   const shown = useMemo(
     () => applyDrilldown(base, drilldown),
     [base, drilldown],
@@ -125,17 +127,15 @@ export default function App() {
     update({ ...state, groupBy: next, drilldown: null });
   const changeDrilldown = (next: Drilldown) =>
     update({ ...state, drilldown: next });
-  const changeSort = (next: Sort) => {
-    setSort(next);
-    setPage(0);
-  };
+  // Sort is part of the URL state like the filters, so a shared link lands
+  // on the same order; `update` also resets the page
+  const changeSort = (next: Sort) => update({ ...state, sort: next });
   const resetAll = () => {
     update(DEFAULT_STATE);
-    setSort(DEFAULT_SORT);
     setShowMap(true);
     setResetRequest((n) => n + 1);
   };
-  const isDefault = serializeState(state) === "" && sort === DEFAULT_SORT;
+  const isDefault = serializeState(state) === "";
 
   // Highlight set: a comparison aid shared via the URL, never a filter
   const toggle = (code: string) =>
@@ -228,7 +228,6 @@ export default function App() {
                   // Same as following the link, without a full page reload
                   event.preventDefault();
                   update(parseState(new URLSearchParams(e.query)));
-                  setSort(DEFAULT_SORT);
                   setResetRequest((n) => n + 1);
                 }}
               >
@@ -244,7 +243,11 @@ export default function App() {
               drilldown ? label(drilldown.dim, drilldown.key) : null,
             )}
           </p>
-          <SummaryStrip summary={summary} />
+          <SummaryStrip
+            summary={summary}
+            recentMonths={filters.recentMonths}
+            asOf={asOf}
+          />
 
           <BreakdownPanel
             groups={groups}

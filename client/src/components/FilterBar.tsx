@@ -201,6 +201,21 @@ export function FilterBar({
         onChange={(statuses) => onChange({ ...filters, statuses })}
         disabled={disabled}
       />
+      <label
+        className={
+          filters.recentMonths === 12 ? "toolbar-check active" : "toolbar-check"
+        }
+      >
+        <input
+          type="checkbox"
+          checked={filters.recentMonths === 12}
+          disabled={disabled}
+          onChange={(e) =>
+            onChange({ ...filters, recentMonths: e.target.checked ? 12 : null })
+          }
+        />
+        Online in the last 12 months
+      </label>
       <label htmlFor={searchId} className="visually-hidden">
         Search facilities
       </label>

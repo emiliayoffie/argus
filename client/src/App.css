@@ -183,6 +183,25 @@ footer a {
   font-size: 0.78rem;
 }
 
+/* A single-option control that sits like a fourth menu in the toolbar */
+.toolbar-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  user-select: none;
+}
+
+.toolbar-check.active {
+  border-color: var(--lavender);
+  background: var(--lavender-soft);
+  font-weight: 600;
+}
+
 .toolbar-search {
   flex: 1 1 14rem;
   min-width: 10rem;

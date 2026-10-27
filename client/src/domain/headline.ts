@@ -38,6 +38,10 @@ export function headline(
   const search = filters.search.trim()
     ? `, matching “${filters.search.trim()}”`
     : "";
+  const recent =
+    filters.recentMonths !== null
+      ? `, online in the last ${filters.recentMonths} months`
+      : "";
   const narrowed = drilldownLabel ? ` (showing ${drilldownLabel})` : "";
 
   // Figures that would be unknown are left out rather than shown as 0
@@ -48,5 +52,5 @@ export function headline(
     figures.push(`${formatMwh(summary.batteryStorageMwh)} of battery storage`);
   const tail = figures.length ? ` — ${figures.join(", ")}.` : ".";
 
-  return `${formatCount(summary.facilityCount)} ${subject}${where}${statuses}${search}${narrowed}${tail}`;
+  return `${formatCount(summary.facilityCount)} ${subject}${where}${statuses}${search}${recent}${narrowed}${tail}`;
 }

@@ -1,8 +1,21 @@
-import { formatCount, formatMw, formatMwh } from "../domain/format";
-import { label, type Summary } from "../domain/types";
+import {
+  formatCount,
+  formatMw,
+  formatMwh,
+  formatSourceDate,
+} from "../domain/format";
+import { label, type RecentMonths, type Summary } from "../domain/types";
 
 // Totals for the current selection
-export function SummaryStrip({ summary }: { summary: Summary }) {
+export function SummaryStrip({
+  summary,
+  recentMonths,
+  asOf,
+}: {
+  summary: Summary;
+  recentMonths: RecentMonths;
+  asOf: string;
+}) {
   const noMw = summary.mwUnitCount === 0;
   return (
     <section className="summary" aria-labelledby="summary-heading">
@@ -47,6 +60,13 @@ export function SummaryStrip({ summary }: { summary: Summary }) {
             is the sum of retired unit registrations and may include capacity
             re-registered under a newer unit.
           </p>
+          {recentMonths !== null && asOf && (
+            <p className="muted">
+              Online window: the {recentMonths} months to{" "}
+              {formatSourceDate({ iso: asOf, precision: "day" })}. Month- and
+              year-only dates count from the start of their period.
+            </p>
+          )}
         </details>
       </div>
       {summary.batteryUnits > 0 && (

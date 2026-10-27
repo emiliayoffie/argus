@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AppState } from "./types";
+import { DEFAULT_SORT, type AppState } from "./types";
 import {
   DEFAULT_STATE,
   MAX_SELECTED,
@@ -21,16 +21,18 @@ describe("parseState / serializeState", () => {
         techGroups: ["battery"],
         statuses: ["operating", "commissioning"],
         search: "bess",
+        recentMonths: 12,
       },
       groupBy: "state",
       measure: "facilities",
       drilldown: { dim: "state", key: "NSW" },
       view: { lat: -33.0864, lng: 138.5187, zoom: 9 },
       selected: ["HORNSDPR", "NESBESS2"],
+      sort: { key: "keyDate", direction: "desc" },
     };
     const query = serializeState(state);
     expect(query).toBe(
-      "state=NSW%2CQLD&tech=battery&status=operating%2Ccommissioning&q=bess&by=state&measure=facilities&drill=state%3ANSW&view=-33.0864%2C138.5187%2C9&sel=HORNSDPR%2CNESBESS2",
+      "state=NSW%2CQLD&tech=battery&status=operating%2Ccommissioning&q=bess&recent=12&by=state&measure=facilities&drill=state%3ANSW&view=-33.0864%2C138.5187%2C9&sel=HORNSDPR%2CNESBESS2&sort=keyDate%3Adesc",
     );
     expect(parse(query)).toEqual(state);
   });
@@ -73,6 +75,35 @@ describe("parseState / serializeState", () => {
     expect(parse("drill=techGroup:nuclear").drilldown).toBeNull();
     expect(parse("drill=garbage").drilldown).toBeNull();
     expect(parse("drill=:battery").drilldown).toBeNull();
+  });
+
+  it("round-trips a sort, omits the default, and rejects bad values", () => {
+    expect(
+      serializeState({
+        ...DEFAULT_STATE,
+        sort: { key: "keyDate", direction: "desc" },
+      }),
+    ).toBe("sort=keyDate%3Adesc");
+    expect(parse("sort=keyDate:desc").sort).toEqual({
+      key: "keyDate",
+      direction: "desc",
+    });
+    expect(serializeState({ ...DEFAULT_STATE, sort: DEFAULT_SORT })).toBe("");
+    expect(parse("sort=keyDate:sideways").sort).toEqual(DEFAULT_SORT);
+    expect(parse("sort=bogus:desc").sort).toEqual(DEFAULT_SORT);
+    expect(parse("sort=keyDate").sort).toEqual(DEFAULT_SORT);
+  });
+
+  it("round-trips the recent window and rejects other values", () => {
+    const state = {
+      ...DEFAULT_STATE,
+      filters: { ...DEFAULT_STATE.filters, recentMonths: 12 as const },
+    };
+    expect(serializeState(state)).toBe("recent=12");
+    expect(parse("recent=12").filters.recentMonths).toBe(12);
+    expect(parse("recent=24").filters.recentMonths).toBe(24);
+    expect(parse("recent=7").filters.recentMonths).toBeNull();
+    expect(parse("recent=").filters.recentMonths).toBeNull();
   });
 });
 
