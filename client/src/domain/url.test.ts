@@ -25,6 +25,7 @@ describe("parseState / serializeState", () => {
         commenced: { from: "2025-10-22", to: "2026-01-01" },
       },
       groupBy: "state",
+      splitBy: null,
       measure: "facilities",
       drilldown: { dim: "state", key: "NSW" },
       view: { lat: -33.0864, lng: 138.5187, zoom: 9 },
@@ -93,6 +94,19 @@ describe("parseState / serializeState", () => {
     expect(parse("sort=keyDate:sideways").sort).toEqual(DEFAULT_SORT);
     expect(parse("sort=bogus:desc").sort).toEqual(DEFAULT_SORT);
     expect(parse("sort=keyDate").sort).toEqual(DEFAULT_SORT);
+  });
+
+  it("round-trips split=, drops split matching by= and unknown values", () => {
+    const state: AppState = {
+      ...DEFAULT_STATE,
+      groupBy: "state",
+      splitBy: "techGroup",
+    };
+    expect(serializeState(state)).toBe("by=state&split=techGroup");
+    expect(parse("by=state&split=techGroup").splitBy).toBe("techGroup");
+    expect(parse("by=state&split=state").splitBy).toBeNull();
+    expect(parse("split=bogus").splitBy).toBeNull();
+    expect(serializeState(DEFAULT_STATE)).toBe("");
   });
 
   it("parses recent= as an input-only shorthand that never serialises", () => {

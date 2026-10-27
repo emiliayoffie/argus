@@ -150,6 +150,8 @@ export const DEFAULT_SORT: Sort = { key: "mw", direction: "desc" };
 export type AppState = {
   filters: Filters;
   groupBy: Dimension;
+  // Secondary dimension shown as stacked segments inside each bar
+  splitBy: Dimension | null;
   measure: Measure;
   drilldown: Drilldown;
   view: MapView;
@@ -185,6 +187,16 @@ export type Summary = {
   unknownCapacityUnits: number;
 };
 
+// One segment of a split-by breakdown bar, always in the split dimension's
+// canonical order so a segment key keeps the same colour on every bar
+export type BreakdownSegment = {
+  key: string;
+  label: string;
+  mw: number;
+  facilities: number;
+  units: number;
+};
+
 // One bar of a breakdown.
 export type BreakdownGroup = {
   key: string;
@@ -192,6 +204,9 @@ export type BreakdownGroup = {
   mw: number;
   facilities: number;
   units: number;
+  // MW-eligible units whose capacity is absent upstream
+  unknownMwUnits: number;
+  segments: BreakdownSegment[];
 };
 
 // The one date worth showing for a unit, chosen by its status.

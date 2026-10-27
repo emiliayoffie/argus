@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, type KeyboardEvent } from "react";
 import { isCalendarDate, monthsBefore } from "../domain/format";
 import { isEmptyRange } from "../domain/filter";
 import {
@@ -11,6 +11,7 @@ import {
   type Filters,
 } from "../domain/types";
 import { SEARCH_MAX_LENGTH } from "../domain/url";
+import { useDropdown } from "../useDropdown";
 
 type Props = {
   filters: Filters;
@@ -22,60 +23,6 @@ type Props = {
   // Dataset date: bounds the pickers and anchors "Last 12 months"
   asOf: string;
 };
-
-// The plumbing every <details> dropdown in the toolbar shares: open state,
-// close on outside pointerdown or on focus leaving, Escape closes and returns
-// focus to the summary. Per-menu key handling stays in the component so date
-// inputs can keep their native arrow-key behaviour
-function useDropdown() {
-  const details = useRef<HTMLDetailsElement>(null);
-  const [open, setOpen] = useState(false);
-
-  const close = (returnFocus: boolean) => {
-    const el = details.current;
-    if (!el?.open) return;
-    el.open = false;
-    if (returnFocus) el.querySelector("summary")?.focus();
-  };
-
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      const el = details.current;
-      if (
-        el?.open &&
-        event.target instanceof Node &&
-        !el.contains(event.target)
-      )
-        close(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, []);
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDetailsElement>) => {
-    if (event.key === "Escape" && details.current?.open) {
-      event.preventDefault();
-      close(true);
-    }
-  };
-
-  const detailsProps = {
-    ref: details,
-    onToggle: (e: React.SyntheticEvent<HTMLDetailsElement>) =>
-      setOpen(e.currentTarget.open),
-    onKeyDown,
-    onBlur: (e: React.FocusEvent<HTMLDetailsElement>) => {
-      // Focus moved to something outside the menu (Tab out): close without
-      // stealing focus back. A blur with no target is ignored: iOS Safari
-      // doesn't focus a tapped control, so closing here would swallow the tap.
-      // Taps outside are handled by the document pointerdown listener
-      if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
-        close(false);
-    },
-  };
-
-  return { details, open, close, detailsProps };
-}
 
 // A native <details> dropdown holding a checkbox list. OR within the menu;
 // the toolbar ANDs the menus together. Keyboard: Enter/Space opens and

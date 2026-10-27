@@ -1,5 +1,6 @@
 import { formatCount, formatMw, formatMwh } from "../domain/format";
 import { label, type Summary } from "../domain/types";
+import { useDropdown } from "../useDropdown";
 
 // Totals for the current selection
 export function SummaryStrip({
@@ -10,6 +11,7 @@ export function SummaryStrip({
   hasDateFilter: boolean;
 }) {
   const noMw = summary.mwUnitCount === 0;
+  const { detailsProps } = useDropdown();
   return (
     <section className="summary" aria-labelledby="summary-heading">
       <h2 id="summary-heading" className="visually-hidden">
@@ -39,26 +41,28 @@ export function SummaryStrip({
             ))}
           </p>
         )}
-        <details>
+        <details className="info" {...detailsProps}>
           <summary>How is this calculated?</summary>
-          <p>
-            Registered capacity of matching generator units:{" "}
-            <strong>
-              {formatCount(summary.mwUnitCount)} counted ·{" "}
-              {formatCount(summary.excludedUnits)} excluded (loads, pumps) ·{" "}
-              {formatCount(summary.unknownCapacityUnits)} with unknown capacity,
-              not counted.
-            </strong>{" "}
-            Each battery is counted once, using its discharging unit. Retired MW
-            is the sum of retired unit registrations and may include capacity
-            re-registered under a newer unit.
-          </p>
-          {hasDateFilter && (
-            <p className="muted">
-              Date filters: month- and year-only dates count from the start of
-              their period.
+          <div className="info-panel">
+            <p>
+              Registered capacity of matching generator units:{" "}
+              <strong>
+                {formatCount(summary.mwUnitCount)} counted ·{" "}
+                {formatCount(summary.excludedUnits)} excluded (loads, pumps) ·{" "}
+                {formatCount(summary.unknownCapacityUnits)} with unknown
+                capacity, not counted.
+              </strong>{" "}
+              Each battery is counted once, using its discharging unit. Retired
+              MW is the sum of retired unit registrations and may include
+              capacity re-registered under a newer unit.
             </p>
-          )}
+            {hasDateFilter && (
+              <p className="muted">
+                Date filters: month- and year-only dates count from the start of
+                their period.
+              </p>
+            )}
+          </div>
         </details>
       </div>
       {summary.batteryUnits > 0 && (

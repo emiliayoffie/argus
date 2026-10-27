@@ -501,6 +501,26 @@ footer a {
   color: var(--muted);
 }
 
+/* The MW explainer floats over the page instead of stretching the card */
+.info {
+  position: relative;
+}
+
+.info-panel {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 1000;
+  width: min(26rem, calc(100vw - 2rem));
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 6px 20px var(--shadow);
+  font-size: 0.9rem;
+  line-height: normal;
+}
+
 /* Breakdown */
 
 .breakdown {
@@ -522,6 +542,18 @@ footer a {
 .breakdown-header h2 {
   font-size: 1.1rem;
   margin-right: auto;
+}
+
+.toggle-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.toggle-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .toggle {
@@ -583,9 +615,48 @@ footer a {
   background: var(--accent);
 }
 
+/* Stacked segments sit edge to edge with a hairline paper gap */
+.bar-segment {
+  display: block;
+  float: left;
+  height: 100%;
+  box-shadow: 1px 0 0 var(--paper);
+}
+
+.bar-note {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-left: 0.25rem;
+}
+
+.split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.split-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.split-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border);
+}
+
 .bar-value {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .drilldown-note {
@@ -940,6 +1011,18 @@ td .note {
   .menu-panel label {
     padding: 0.5rem 0;
     white-space: normal;
+  }
+
+  .info-panel {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+
+  /* The "+n unknown" note would push the bar row past the viewport; the
+     full wording stays in the bar's title */
+  .bar-note {
+    display: none;
   }
 
   .menu-date {

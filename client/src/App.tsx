@@ -71,11 +71,12 @@ const EXAMPLES: { question: string; query: string }[] = [
   },
   {
     question: "Committed wind, solar and battery capacity, state by state",
-    query: "tech=solar,wind,battery&status=committed&by=state",
+    query: "tech=solar,wind,battery&status=committed&by=state&split=techGroup",
   },
   {
     question: "The fossil fleet: what has retired and what still runs",
-    query: "tech=coal,gas,distillate&by=status&measure=facilities",
+    query:
+      "tech=coal,gas,distillate&by=status&measure=facilities&split=techGroup",
   },
 ];
 
@@ -97,7 +98,7 @@ export default function App() {
   const [locate, setLocate] = useState({ code: "", request: 0 });
   // Bumped by Reset so the map refits even if the facilities didn't change
   const [resetRequest, setResetRequest] = useState(0);
-  const { groupBy: dim, measure, drilldown, sort } = state;
+  const { groupBy: dim, splitBy, measure, drilldown, sort } = state;
 
   // Everything below is derived from the state above; no second copy of the
   // data is kept. `base` feeds the bars; `shown` is base narrowed by a bar.
@@ -120,7 +121,7 @@ export default function App() {
     [base, drilldown],
   );
   const summary = summarize(shown);
-  const groups = groupBy(base, dim, measure);
+  const groups = groupBy(base, dim, measure, splitBy);
   const facilities = useMemo(
     () => sortFacilities(groupByFacility(shown, lifecycle, asOf), sort),
     [shown, lifecycle, asOf, sort],
@@ -155,7 +156,15 @@ export default function App() {
   const changeFilters = (next: Filters) =>
     update({ ...state, filters: next, drilldown: null });
   const changeDim = (next: Dimension) =>
-    update({ ...state, groupBy: next, drilldown: null });
+    update({
+      ...state,
+      groupBy: next,
+      // Splitting by the dimension just grouped by would be redundant
+      splitBy: next === state.splitBy ? null : state.splitBy,
+      drilldown: null,
+    });
+  const changeSplitBy = (next: Dimension | null) =>
+    update({ ...state, splitBy: next, drilldown: null });
   const changeDrilldown = (next: Drilldown) =>
     update({ ...state, drilldown: next });
   // Sort is part of the URL state like the filters, so a shared link lands
@@ -399,6 +408,8 @@ export default function App() {
             measure={measure}
             selectedKey={drilldown?.key ?? null}
             onGroupBy={changeDim}
+            splitBy={splitBy}
+            onSplitBy={changeSplitBy}
             onMeasure={(next) => update({ ...state, measure: next })}
             onSelect={(key) =>
               changeDrilldown(drilldown?.key === key ? null : { dim, key })

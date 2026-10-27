@@ -1,5 +1,8 @@
 import {
   label,
+  STATES,
+  STATUSES,
+  TECH_GROUPS,
   type BreakdownGroup,
   type Dimension,
   type Measure,
@@ -60,28 +63,68 @@ export function summarize(rows: UnitRow[]): Summary {
   return summary;
 }
 
+// Canonical key order per dimension, so segments render the same way on
+// every bar regardless of which values are present
+export const DIM_ORDER: Record<Dimension, readonly string[]> = {
+  state: STATES,
+  techGroup: TECH_GROUPS,
+  status: STATUSES,
+};
+
 // One group per distinct value of `dim`, sorted by `measure` descending.
 // A facility with units in two groups is counted in both, so adding up the
-// groups can give more than the real number of facilities.
+// groups can give more than the real number of facilities. With `splitBy`,
+// each group also gets segments in the split dimension's canonical order
 export function groupBy(
   rows: UnitRow[],
   dim: Dimension,
   measure: Measure,
+  splitBy: Dimension | null = null,
 ): BreakdownGroup[] {
   const groups = new Map<
     string,
-    { mw: number; facilities: Set<string>; units: number }
+    {
+      mw: number;
+      facilities: Set<string>;
+      units: number;
+      unknownMwUnits: number;
+      segments: Map<
+        string,
+        { mw: number; facilities: Set<string>; units: number }
+      >;
+    }
   >();
   for (const row of rows) {
     const key = row[dim];
     let group = groups.get(key);
     if (!group) {
-      group = { mw: 0, facilities: new Set(), units: 0 };
+      group = {
+        mw: 0,
+        facilities: new Set(),
+        units: 0,
+        unknownMwUnits: 0,
+        segments: new Map(),
+      };
       groups.set(key, group);
     }
     group.units++;
     group.facilities.add(row.facilityCode);
-    if (row.mwEligible && row.capacityMw != null) group.mw += row.capacityMw;
+    if (row.mwEligible) {
+      if (row.capacityMw != null) group.mw += row.capacityMw;
+      else group.unknownMwUnits++;
+    }
+    if (splitBy !== null) {
+      const segKey = row[splitBy];
+      let segment = group.segments.get(segKey);
+      if (!segment) {
+        segment = { mw: 0, facilities: new Set(), units: 0 };
+        group.segments.set(segKey, segment);
+      }
+      segment.units++;
+      segment.facilities.add(row.facilityCode);
+      if (row.mwEligible && row.capacityMw != null)
+        segment.mw += row.capacityMw;
+    }
   }
   return [...groups]
     .map(([key, g]) => ({
@@ -90,6 +133,23 @@ export function groupBy(
       mw: g.mw,
       facilities: g.facilities.size,
       units: g.units,
+      unknownMwUnits: g.unknownMwUnits,
+      segments:
+        splitBy === null
+          ? []
+          : [...g.segments]
+              .map(([segKey, s]) => ({
+                key: segKey,
+                label: label(splitBy, segKey),
+                mw: s.mw,
+                facilities: s.facilities.size,
+                units: s.units,
+              }))
+              .sort(
+                (a, b) =>
+                  DIM_ORDER[splitBy].indexOf(a.key) -
+                  DIM_ORDER[splitBy].indexOf(b.key),
+              ),
     }))
     .sort((a, b) =>
       measure === "mw" ? b.mw - a.mw : b.facilities - a.facilities,
