@@ -2,7 +2,7 @@
 
 Argus is a prototype that uses the [OpenElectricity](https://openelectricity.org.au) Facilities API to answer questions about Australia's generation and storage fleet: what's operating, what's coming, what's closing, and how much capacity that adds up to.
 
-**Live:** https://rm-challenge-server.rm-challenge.workers.dev/
+**Live:** https://argus.arcane-dev.workers.dev/
 
 The name comes from Argus Panoptes, the many-eyed watchman in Greek myth. The goal is to help people see the whole fleet at once and then look closely at the facilities behind any number. Monitoring changes over time is the natural next step.
 

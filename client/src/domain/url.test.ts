@@ -23,6 +23,8 @@ describe("parseState / serializeState", () => {
         search: "bess",
         recentMonths: null,
         commenced: { from: "2025-10-22", to: "2026-01-01" },
+        expected: { from: "2027-01-01", to: null },
+        closed: { from: null, to: null },
       },
       groupBy: "state",
       splitBy: null,
@@ -34,7 +36,7 @@ describe("parseState / serializeState", () => {
     };
     const query = serializeState(state);
     expect(query).toBe(
-      "state=NSW%2CQLD&tech=battery&status=operating%2Ccommissioning&q=bess&commenced=2025-10-22..2026-01-01&by=state&measure=facilities&drill=state%3ANSW&view=-33.0864%2C138.5187%2C9&sel=HORNSDPR%2CNESBESS2&sort=keyDate%3Adesc",
+      "state=NSW%2CQLD&tech=battery&status=operating%2Ccommissioning&q=bess&commenced=2025-10-22..2026-01-01&expected=2027-01-01..&by=state&measure=facilities&drill=state%3ANSW&view=-33.0864%2C138.5187%2C9&sel=HORNSDPR%2CNESBESS2&sort=keyDate%3Adesc",
     );
     expect(parse(query)).toEqual(state);
   });
@@ -213,5 +215,35 @@ describe("parseSelected / toggleSelected", () => {
     expect(next).toHaveLength(MAX_SELECTED);
     expect(next.at(-1)).toBe("NEW");
     expect(next).not.toContain("F0");
+  });
+});
+
+describe("expected and closed params", () => {
+  it("round-trips all three ranges together", () => {
+    const state: AppState = {
+      ...DEFAULT_STATE,
+      filters: {
+        ...DEFAULT_STATE.filters,
+        commenced: { from: "2025-01-01", to: null },
+        expected: { from: "2027-01-01", to: "2030-01-01" },
+        closed: { from: null, to: "2020-12-31" },
+      },
+    };
+    const q = serializeState(state);
+    expect(q).toBe(
+      "commenced=2025-01-01..&expected=2027-01-01..2030-01-01&closed=..2020-12-31",
+    );
+    expect(parse(q).filters).toEqual(state.filters);
+  });
+
+  it("treats malformed bounds as open ends", () => {
+    expect(parse("expected=garbage..2027-01-01").filters.expected).toEqual({
+      from: null,
+      to: "2027-01-01",
+    });
+    expect(parse("closed=2020-02-30..nope").filters.closed).toEqual({
+      from: null,
+      to: null,
+    });
   });
 });

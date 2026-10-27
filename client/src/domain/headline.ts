@@ -1,5 +1,5 @@
 import { formatCount, formatMw, formatMwh, formatSourceDate } from "./format";
-import { label, type AppState, type Summary } from "./types";
+import { label, type AppState, type DateRange, type Summary } from "./types";
 
 // "a", "a and b", "a, b and c"
 const list = (items: string[], conjunction: "and" | "or"): string =>
@@ -41,15 +41,18 @@ export function headline(
   // The date range is written out in words; either side may be open
   const day = (iso: string) =>
     formatSourceDate({ iso, precision: "day" }) ?? iso;
-  const { from, to } = filters.commenced;
-  const recent =
-    from !== null && to !== null
-      ? `, came online ${day(from)} – ${day(to)}`
-      : from !== null
-        ? `, came online from ${day(from)}`
-        : to !== null
-          ? `, came online until ${day(to)}`
+  const rangeText = (range: DateRange, verb: string) =>
+    range.from !== null && range.to !== null
+      ? `, ${verb} ${day(range.from)} – ${day(range.to)}`
+      : range.from !== null
+        ? `, ${verb} from ${day(range.from)}`
+        : range.to !== null
+          ? `, ${verb} until ${day(range.to)}`
           : "";
+  const dates =
+    rangeText(filters.commenced, "came online") +
+    rangeText(filters.expected, "expected online") +
+    rangeText(filters.closed, "closed");
   const narrowed = drilldownLabel ? ` (showing ${drilldownLabel})` : "";
 
   // Figures that would be unknown are left out rather than shown as 0
@@ -60,5 +63,5 @@ export function headline(
     figures.push(`${formatMwh(summary.batteryStorageMwh)} of battery storage`);
   const tail = figures.length ? ` — ${figures.join(", ")}.` : ".";
 
-  return `${formatCount(summary.facilityCount)} ${subject}${where}${statuses}${search}${recent}${narrowed}${tail}`;
+  return `${formatCount(summary.facilityCount)} ${subject}${where}${statuses}${search}${dates}${narrowed}${tail}`;
 }

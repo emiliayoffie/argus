@@ -116,6 +116,13 @@ export function BreakdownPanel({
     splitBy === null
       ? new Map<string, string>()
       : segmentShades(splitBy, groups);
+  // Share of the total only makes sense for MW: facility counts double-count
+  // hybrids, so a percentage would lie
+  const totalMw = groups.reduce((n, g) => n + g.mw, 0);
+  const share = (g: BreakdownGroup) =>
+    measure === "mw" && totalMw > 0
+      ? `${Math.round((100 * g.mw) / totalMw)}%`
+      : null;
   const text = (g: BreakdownGroup) =>
     measure === "mw"
       ? g.mw === 0
@@ -168,7 +175,7 @@ export function BreakdownPanel({
                   className={selected ? "bar selected" : "bar"}
                   aria-pressed={selected}
                   onClick={() => onSelect(g.key)}
-                  title={`${g.label}: ${formatMw(g.mw)}, ${formatCount(g.facilities)} facilities, ${formatCount(g.units)} units${unknownNote}`}
+                  title={`${g.label}: ${formatMw(g.mw)}${share(g) ? ` (${share(g)} of total)` : ""}, ${formatCount(g.facilities)} facilities, ${formatCount(g.units)} units${unknownNote}`}
                 >
                   <span className="bar-label">{g.label}</span>
                   <span className="bar-track">
@@ -193,6 +200,9 @@ export function BreakdownPanel({
                   </span>
                   <span className="bar-value">
                     {text(g)}
+                    {share(g) && (
+                      <span className="bar-share"> · {share(g)}</span>
+                    )}
                     {measure === "mw" && g.unknownMwUnits > 0 && (
                       <span className="bar-note">
                         {" "}

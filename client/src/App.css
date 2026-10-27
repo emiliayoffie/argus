@@ -142,7 +142,8 @@ main > * {
     opacity 120ms ease-out,
     transform 120ms ease-out;
   pointer-events: none;
-  z-index: 2;
+  /* Above Leaflet panes (z-index 400+) so tooltips never hide behind the map */
+  z-index: 1100;
 }
 
 [data-tip]:hover::after,
@@ -196,7 +197,6 @@ main > * {
   transform: translateY(-0.06em);
 }
 
-.theme-toggle[data-state="closed"] .eye-open,
 .theme-toggle[data-state="open"] .eye-closed {
   display: none;
 }
@@ -209,22 +209,99 @@ main > * {
   transform: scaleY(0);
 }
 
-/* Hover blinks the open eye. :where() keeps these rules at low specificity
-   so the click animations below always override them */
-.theme-toggle:where([data-state="open"]:hover) .lid {
+/* Idle blink: a ~100 ms lid drop once every 25 s. In the closed state the
+   open group stays rendered but visibility-animated so it can peek open for
+   ~500 ms per cycle while the closed line hides */
+.theme-toggle[data-state="open"] .lid {
+  animation: idle-blink 25s ease-in-out infinite;
+}
+
+.theme-toggle[data-state="closed"] .eye-open {
+  display: inline;
+  visibility: hidden;
+  animation: peek-show 25s step-end infinite;
+}
+
+.theme-toggle[data-state="closed"] .eye-closed {
+  animation: peek-hide 25s step-end infinite;
+}
+
+.theme-toggle[data-state="closed"] .lid {
+  animation: peek-lid 25s ease-in-out infinite;
+}
+
+@keyframes idle-blink {
+  0%,
+  100% {
+    transform: scaleY(0);
+  }
+  0.4% {
+    transform: scaleY(1);
+  }
+  0.8% {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes peek-show {
+  0%,
+  100% {
+    visibility: hidden;
+  }
+  0.1%,
+  2% {
+    visibility: visible;
+  }
+  2.1% {
+    visibility: hidden;
+  }
+}
+
+@keyframes peek-hide {
+  0%,
+  100% {
+    visibility: visible;
+  }
+  0.1%,
+  2% {
+    visibility: hidden;
+  }
+  2.1% {
+    visibility: visible;
+  }
+}
+
+@keyframes peek-lid {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  0.5%,
+  1.6% {
+    transform: scaleY(0);
+  }
+  2% {
+    transform: scaleY(1);
+  }
+}
+
+/* Hover blinks the open eye */
+.theme-toggle[data-state="open"]:hover .lid {
   animation: wink 700ms ease-in-out;
 }
 
 /* Hovering the closed eye makes it peek open until the pointer leaves */
 .theme-toggle[data-state="closed"]:hover .eye-open {
-  display: inline;
+  visibility: visible;
+  animation: none;
 }
 
 .theme-toggle[data-state="closed"]:hover .eye-closed {
-  display: none;
+  visibility: hidden;
+  animation: none;
 }
 
-.theme-toggle:where([data-state="closed"]:hover) .lid {
+.theme-toggle[data-state="closed"]:hover .lid {
   animation: lid-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
@@ -239,12 +316,15 @@ main > * {
   }
 }
 
+/* The one place the click must win: these beat the hover and idle
+   animations regardless of cascade order. The JS timers own the theme
+   flip; !important here is purely visual */
 .theme-toggle.closing .lid {
-  animation: lid-down 130ms ease-in forwards;
+  animation: lid-down 130ms ease-in forwards !important;
 }
 
 .theme-toggle.opening .lid {
-  animation: lid-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: lid-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
 }
 
 @keyframes lid-down {
@@ -266,10 +346,15 @@ main > * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .theme-toggle:hover .lid,
-  .theme-toggle.closing .lid,
-  .theme-toggle.opening .lid {
+  .theme-toggle .lid,
+  .theme-toggle .eye-open,
+  .theme-toggle .eye-closed {
     animation: none;
+  }
+
+  /* With no peek animation to hide it, keep the open group truly hidden */
+  .theme-toggle[data-state="closed"] .eye-open {
+    display: none;
   }
 }
 
@@ -606,7 +691,7 @@ footer a {
 
 .bar {
   display: grid;
-  grid-template-columns: 8rem 1fr 6rem;
+  grid-template-columns: 8rem 1fr auto;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
@@ -642,9 +727,14 @@ footer a {
 }
 
 .bar-note {
+  display: block;
   font-size: 0.7rem;
+  line-height: 1.2;
   color: var(--muted);
-  margin-left: 0.25rem;
+}
+
+.bar-share {
+  color: var(--muted);
 }
 
 .split-legend {
@@ -672,6 +762,7 @@ footer a {
 }
 
 .bar-value {
+  min-width: 6rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -922,10 +1013,15 @@ td .note {
 
 .pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   padding: 0.75rem;
+}
+
+.pagination .export {
+  margin-left: auto;
 }
 
 /* Status and error */
@@ -1050,6 +1146,13 @@ td .note {
      full wording stays in the bar's title */
   .bar-note {
     display: none;
+  }
+
+  /* The share widens the value column past the panel at this width; a second
+     line keeps the auto column narrow instead */
+  .bar-share {
+    display: block;
+    font-size: 0.75rem;
   }
 
   .menu-date {

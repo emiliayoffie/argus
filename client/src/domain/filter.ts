@@ -14,6 +14,8 @@ export const EMPTY_FILTERS: Filters = {
   search: "",
   recentMonths: null,
   commenced: { ...EMPTY_RANGE },
+  expected: { ...EMPTY_RANGE },
+  closed: { ...EMPTY_RANGE },
 };
 
 // Turns the `recent=N` URL shorthand into an explicit commenced range so the
@@ -41,15 +43,29 @@ export const isEmptyRange = (r: DateRange): boolean =>
 // simply matches nothing. Only operating and commissioning count as "came
 // online"; a missing commencement is out, as is a start on a retired unit.
 // Month/year-precision dates compare at the first day of their period
+const inRange = (key: string | null, range: DateRange): boolean =>
+  key !== null &&
+  (range.from === null || key >= range.from) &&
+  (range.to === null || key <= range.to);
+
 export function commencedWithin(row: UnitRow, range: DateRange): boolean {
-  if (row.status !== "operating" && row.status !== "commissioning")
-    return false;
-  const key = dateSortKey(row.commencement);
   return (
-    key !== null &&
-    (range.from === null || key >= range.from) &&
-    (range.to === null || key <= range.to)
+    (row.status === "operating" || row.status === "commissioning") &&
+    inRange(dateSortKey(row.commencement), range)
   );
+}
+
+// Committed units expected to start in the window
+export function expectedWithin(row: UnitRow, range: DateRange): boolean {
+  return (
+    row.status === "committed" &&
+    inRange(dateSortKey(row.expectedOperation), range)
+  );
+}
+
+// Retired units that closed in the window
+export function closedWithin(row: UnitRow, range: DateRange): boolean {
+  return row.status === "retired" && inRange(dateSortKey(row.closure), range);
 }
 
 // Unit-aware filtering: every facet must match the same unit, so a hybrid
@@ -69,7 +85,10 @@ export function applyFilters(rows: UnitRow[], filters: Filters): UnitRow[] {
         row.facilityName.toLowerCase().includes(search) ||
         row.facilityCode.toLowerCase().includes(search)) &&
       (isEmptyRange(filters.commenced) ||
-        commencedWithin(row, filters.commenced)),
+        commencedWithin(row, filters.commenced)) &&
+      (isEmptyRange(filters.expected) ||
+        expectedWithin(row, filters.expected)) &&
+      (isEmptyRange(filters.closed) || closedWithin(row, filters.closed)),
   );
 }
 

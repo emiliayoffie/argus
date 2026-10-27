@@ -72,6 +72,18 @@ export function monthsBefore(ymd: string, months: number): string {
   return `${String(y).padStart(4, "0")}-${pad(m)}-${pad(Math.min(day, maxDay))}`;
 }
 
+// `ymd` plus `years`, clamped for Feb 29. Same pure string math as
+// monthsBefore
+export function yearsAfter(ymd: string, years: number): string {
+  const year = Number(ymd.slice(0, 4)) + years;
+  const month = Number(ymd.slice(5, 7));
+  const day = Number(ymd.slice(8, 10));
+  const maxDay =
+    month === 2 ? (isLeapYear(year) ? 29 : 28) : DAYS_IN_MONTH[month - 1];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${String(year).padStart(4, "0")}-${pad(month)}-${pad(Math.min(day, maxDay))}`;
+}
+
 // Strict YYYY-MM-DD with a real day in a real month (leap-aware). Anything
 // else — bad lengths, month 13, 31 April, a longer ISO string — is not a
 // calendar date

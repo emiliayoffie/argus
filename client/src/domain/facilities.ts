@@ -1,12 +1,16 @@
-import { dateSortKey } from "./format";
+import { dateSortKey, isCalendarDate, yearsAfter } from "./format";
 import {
   STATUSES,
   TECH_GROUPS,
   type FacilityRow,
   type KeyDate,
   type Sort,
+  type SourceDate,
   type UnitRow,
 } from "./types";
+
+// How far out a published expected-closure date still counts as a plan
+export const CLOSING_HORIZON_YEARS = 10;
 
 // A unit has up to four dates but only one is meaningful for its status:
 // committed → expected start, operating → actual start, retired → closure
@@ -80,6 +84,26 @@ export function groupByFacility(
         latest = kd;
     }
 
+    // Earliest published closure among operating units, but only within the
+    // horizon: most units carry a 30–80-year placeholder date that isn't a
+    // real decommissioning plan
+    let closing: SourceDate | null = null;
+    const asOfDay = asOf.slice(0, 10);
+    if (isCalendarDate(asOfDay)) {
+      const horizon = yearsAfter(asOfDay, CLOSING_HORIZON_YEARS);
+      for (const u of units) {
+        if (u.status !== "operating") continue;
+        const key = dateSortKey(u.expectedClosure);
+        if (
+          key !== null &&
+          key <= horizon &&
+          (closing === null || key < (dateSortKey(closing) ?? "￿"))
+        ) {
+          closing = u.expectedClosure;
+        }
+      }
+    }
+
     const life = lifecycle.get(code) ?? {
       retiredUnits: 0,
       allUnits: units.length,
@@ -102,6 +126,7 @@ export function groupByFacility(
       retiredUnits: life.retiredUnits,
       allUnits: life.allUnits,
       keyDate: latest,
+      closing,
       lat: units[0].lat,
       lng: units[0].lng,
     };

@@ -29,6 +29,8 @@ describe("headline", () => {
         search: "",
         recentMonths: null,
         commenced: { from: null, to: null },
+        expected: { from: null, to: null },
+        closed: { from: null, to: null },
       },
     };
     expect(sentence(state, "Commissioning")).toMatch(
@@ -46,6 +48,8 @@ describe("headline", () => {
         search: "bogg",
         recentMonths: null,
         commenced: { from: null, to: null },
+        expected: { from: null, to: null },
+        closed: { from: null, to: null },
       },
     };
     expect(sentence(state)).toContain("solar, wind and battery facilit");
@@ -82,5 +86,52 @@ describe("headline", () => {
     expect(sentence(state)).toBe(
       "1 energy facility across Australia, matching “SLDCBLK”.",
     );
+  });
+});
+
+describe("expected and closed fragments", () => {
+  const base: AppState = {
+    ...DEFAULT_STATE,
+    filters: {
+      ...DEFAULT_STATE.filters,
+      techGroups: ["coal"],
+      statuses: ["retired"],
+    },
+  };
+
+  it("writes expected online and closed in words", () => {
+    expect(
+      sentence({
+        ...base,
+        filters: {
+          ...base.filters,
+          expected: { from: "2026-01-01", to: "2027-12-31" },
+        },
+      }),
+    ).toContain("expected online 1 Jan 2026 – 31 Dec 2027");
+    expect(
+      sentence({
+        ...base,
+        filters: {
+          ...base.filters,
+          closed: { from: "2015-01-01", to: "2024-12-31" },
+        },
+      }),
+    ).toContain("closed 1 Jan 2015 – 31 Dec 2024");
+    expect(
+      sentence({
+        ...base,
+        filters: {
+          ...base.filters,
+          expected: { from: "2028-01-01", to: null },
+        },
+      }),
+    ).toContain("expected online from 1 Jan 2028");
+    expect(
+      sentence({
+        ...base,
+        filters: { ...base.filters, closed: { from: null, to: "2020-01-01" } },
+      }),
+    ).toContain("closed until 1 Jan 2020");
   });
 });

@@ -41,6 +41,12 @@ export function SummaryStrip({
             ))}
           </p>
         )}
+        {summary.mwByStatus.some((s) => s.status === "retired" && s.mw > 0) && (
+          <p className="split muted">
+            Retired is a registry status: the MW includes capacity re-registered
+            under newer units and says nothing about mothballing.
+          </p>
+        )}
         <details className="info" {...detailsProps}>
           <summary>How is this calculated?</summary>
           <div className="info-panel">

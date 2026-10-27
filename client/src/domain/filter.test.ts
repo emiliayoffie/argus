@@ -6,7 +6,9 @@ import {
   applyFilters,
   resolveRecent,
 } from "./filter";
-import type { UnitRow } from "./types";
+import type { Filters, UnitRow } from "./types";
+
+const AS_OF = "2026-10-22T03:00:00+10:00";
 
 // A hybrid site: operating solar + committed battery, same facility.
 const hybridSolar = row({
@@ -213,8 +215,6 @@ describe("applyFilters commenced range", () => {
 });
 
 describe("resolveRecent", () => {
-  const AS_OF = "2026-10-22T03:00:00+10:00";
-
   it("turns recent=12 into a commenced-from, keeping the range open", () => {
     const resolved = resolveRecent(
       { ...EMPTY_FILTERS, recentMonths: 12 },
@@ -262,5 +262,96 @@ describe("applyDrilldown", () => {
 
   it("returns nothing for a key absent from the rows", () => {
     expect(applyDrilldown(rows, { dim: "status", key: "retired" })).toEqual([]);
+  });
+});
+
+describe("expected and closed ranges", () => {
+  const f = (over: Partial<Filters>) => ({ ...EMPTY_FILTERS, ...over });
+
+  it("expected matches committed units by expectedOperation", () => {
+    const committed = row({
+      status: "committed",
+      expectedOperation: { iso: "2028-01-15T", precision: "day" },
+    });
+    const out = row({
+      unitCode: "x",
+      status: "committed",
+      expectedOperation: { iso: "2030-01-01T", precision: "day" },
+    });
+    expect(
+      applyFilters(
+        [committed, out],
+        f({ expected: { from: "2027-01-01", to: "2029-01-01" } }),
+      ).length,
+    ).toBe(1);
+  });
+
+  it("expected never matches an operating unit with an in-range date", () => {
+    const operating = row({
+      status: "operating",
+      expectedOperation: { iso: "2028-01-15T", precision: "day" },
+    });
+    expect(
+      applyFilters(
+        [operating],
+        f({ expected: { from: "2027-01-01", to: "2029-01-01" } }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("closed matches retired units by closure", () => {
+    const retired = row({
+      status: "retired",
+      closure: { iso: "2016-06-30T", precision: "day" },
+    });
+    const out = row({
+      unitCode: "x",
+      status: "retired",
+      closure: { iso: "2025-01-01T", precision: "day" },
+    });
+    expect(
+      applyFilters(
+        [retired, out],
+        f({ closed: { from: "2015-01-01", to: "2024-12-31" } }),
+      ).length,
+    ).toBe(1);
+  });
+
+  it("closed never matches a committed unit with an in-range closure", () => {
+    const committed = row({
+      status: "committed",
+      closure: { iso: "2020-01-01T", precision: "day" },
+    });
+    expect(
+      applyFilters(
+        [committed],
+        f({ closed: { from: "2015-01-01", to: "2024-12-31" } }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("all three ranges AND on the same unit", () => {
+    const matching = row({
+      status: "operating",
+      commencement: { iso: "2020-01-01T", precision: "day" },
+      expectedOperation: { iso: "2019-01-01T", precision: "day" },
+    });
+    // expected requires committed, so it always fails on operating rows —
+    // ranges compose per-unit, and no unit can satisfy both at once
+    expect(
+      applyFilters(
+        [matching],
+        f({
+          commenced: { from: "2019-01-01", to: "2021-01-01" },
+          expected: { from: "2018-01-01", to: "2020-01-01" },
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      applyFilters(
+        [matching],
+        f({ commenced: { from: "2019-01-01", to: "2021-01-01" } }),
+      ).length,
+    ).toBe(1);
   });
 });

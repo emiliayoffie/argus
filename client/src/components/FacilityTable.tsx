@@ -23,6 +23,8 @@ type Props = {
   // The row to scroll into view when `locateRequest` changes ("More info" on the map)
   locateCode: string | null;
   locateRequest: number;
+  // Downloads the full filtered list as CSV
+  onExport: () => void;
 };
 
 // Month- and year-precision dates get a ~ so they are not read as exact days
@@ -60,6 +62,7 @@ export function FacilityTable({
   onSelectRange,
   locateCode,
   locateRequest,
+  onExport,
 }: Props) {
   const locateRow = useRef<HTMLTableRowElement>(null);
   useEffect(() => {
@@ -197,6 +200,14 @@ export function FacilityTable({
                         {f.keyDate.past && " (past)"}:
                       </span>{" "}
                       <SourceDateText date={f.keyDate.date} />
+                      {f.closing && (
+                        <>
+                          <br />
+                          <span className="muted">
+                            Closing <SourceDateText date={f.closing} />
+                          </span>
+                        </>
+                      )}
                     </>
                   ) : (
                     "—"
@@ -225,6 +236,15 @@ export function FacilityTable({
           disabled={current >= pageCount - 1}
         >
           Next
+        </button>
+        <button
+          type="button"
+          className="export"
+          onClick={onExport}
+          disabled={facilities.length === 0}
+          title="Download the listed facilities as a CSV file"
+        >
+          Export {formatCount(facilities.length)} as CSV
         </button>
       </nav>
     </section>

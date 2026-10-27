@@ -130,6 +130,10 @@ export type Filters = {
   recentMonths: RecentMonths;
   // Only units that came online in this range
   commenced: DateRange;
+  // Only committed units expected to start in this range
+  expected: DateRange;
+  // Only retired units that closed in this range
+  closed: DateRange;
 };
 
 // Clicking a bar in the breakdown. Filters the rows one step further, after
@@ -233,6 +237,9 @@ export type FacilityRow = {
   retiredUnits: number;
   allUnits: number;
   keyDate: KeyDate | null;
+  // Earliest expected closure among operating units within the horizon;
+  // `null` when none is published
+  closing: SourceDate | null;
   // Facility coordinates; `null` when upstream has none. The row still counts.
   lat: number | null;
   lng: number | null;

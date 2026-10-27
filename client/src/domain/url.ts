@@ -118,9 +118,10 @@ function parseRecent(value: string | null): RecentMonths {
   return RECENT_MONTHS.find((m) => String(m) === value) ?? null;
 }
 
-// commenced=FROM..TO, either side may be empty. Without `..` the whole value
-// is a one-sided `from`. Non-calendar dates on either side are open ends
-function parseCommenced(value: string | null): DateRange {
+// dateRange=FROM..TO, either side may be empty. Without `..` the whole
+// value is a one-sided `from`. Non-calendar dates on either side are open
+// ends. Used by commenced, expected and closed
+function parseRange(value: string | null): DateRange {
   if (!value) return { ...EMPTY_RANGE };
   const separator = value.indexOf("..");
   const rawFrom = separator >= 0 ? value.slice(0, separator) : value;
@@ -162,7 +163,9 @@ export function parseState(params: URLSearchParams): AppState {
       statuses: parseList(params.get("status"), STATUSES),
       search: (params.get("q") ?? "").trim().slice(0, SEARCH_MAX_LENGTH),
       recentMonths: parseRecent(params.get("recent")),
-      commenced: parseCommenced(params.get("commenced")),
+      commenced: parseRange(params.get("commenced")),
+      expected: parseRange(params.get("expected")),
+      closed: parseRange(params.get("closed")),
     },
     groupBy,
     splitBy,
@@ -183,11 +186,14 @@ export function serializeState(state: AppState): string {
     params.set("tech", filters.techGroups.join(","));
   if (filters.statuses.length) params.set("status", filters.statuses.join(","));
   if (filters.search.trim()) params.set("q", filters.search.trim());
-  if (filters.commenced.from !== null || filters.commenced.to !== null)
-    params.set(
-      "commenced",
-      `${filters.commenced.from ?? ""}..${filters.commenced.to ?? ""}`,
-    );
+  for (const [name, range] of [
+    ["commenced", filters.commenced],
+    ["expected", filters.expected],
+    ["closed", filters.closed],
+  ] as const) {
+    if (range.from !== null || range.to !== null)
+      params.set(name, `${range.from ?? ""}..${range.to ?? ""}`);
+  }
   if (state.groupBy !== DEFAULT_STATE.groupBy) params.set("by", state.groupBy);
   if (state.splitBy !== null) params.set("split", state.splitBy);
   if (state.measure !== DEFAULT_STATE.measure)

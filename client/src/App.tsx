@@ -19,6 +19,7 @@ import {
   resolveRecent,
 } from "./domain/filter";
 import { formatCount, formatInstant, formatMw } from "./domain/format";
+import { downloadCsv, facilitiesToCsv } from "./domain/export";
 import { headline } from "./domain/headline";
 import {
   label,
@@ -79,8 +80,7 @@ const EXAMPLES: { question: string; query: string }[] = [
   },
   {
     question: "The fossil fleet: what has retired and what still runs",
-    query:
-      "tech=coal,gas,distillate&by=status&measure=facilities&split=techGroup",
+    query: "tech=coal,gas,distillate&by=status&measure=mw&split=techGroup",
   },
 ];
 
@@ -125,6 +125,7 @@ export default function App() {
   const data = result.status === "ready" ? result.data : null;
   const rows = data?.rows ?? NO_ROWS;
   const asOf = data?.sourceCreatedAt ?? "";
+  const asOfDay = asOf.slice(0, 10) || "unknown-date";
   // The `recent=N` shorthand resolves to a date range here; this resolved
   // `filters` is what every downstream consumer sees (same reference when
   // nothing needed resolving, so memo identities survive)
@@ -406,7 +407,11 @@ export default function App() {
           </p>
           <SummaryStrip
             summary={summary}
-            hasDateFilter={!isEmptyRange(filters.commenced)}
+            hasDateFilter={
+              !isEmptyRange(filters.commenced) ||
+              !isEmptyRange(filters.expected) ||
+              !isEmptyRange(filters.closed)
+            }
           />
 
           <BreakdownPanel
@@ -513,6 +518,12 @@ export default function App() {
                 onSelectRange={selectRange}
                 locateCode={locate.code}
                 locateRequest={locate.request}
+                onExport={() =>
+                  downloadCsv(
+                    `argus-facilities-${asOfDay}.csv`,
+                    facilitiesToCsv(facilities),
+                  )
+                }
               />
             )}
           </section>

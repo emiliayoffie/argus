@@ -211,3 +211,63 @@ describe("sortFacilities", () => {
     expect(codes(rows)).toEqual(before);
   });
 });
+
+describe("closing date", () => {
+  const AS_OF = "2026-10-22T03:00:00+10:00";
+  const unit = (over: Partial<Parameters<typeof row>[0]>) =>
+    row({ facilityCode: "F1", ...over });
+
+  it("picks the earliest expectedClosure among operating units within 10 years", () => {
+    const rows = groupByFacility(
+      [
+        unit({
+          unitCode: "a",
+          status: "operating",
+          expectedClosure: { iso: "2030-05-01T", precision: "day" },
+        }),
+        unit({
+          unitCode: "b",
+          status: "operating",
+          expectedClosure: { iso: "2028-03-01T", precision: "day" },
+        }),
+        unit({
+          unitCode: "c",
+          status: "retired",
+          expectedClosure: { iso: "2027-01-01T", precision: "day" },
+        }),
+      ],
+      new Map(),
+      AS_OF,
+    );
+    expect(rows[0].closing?.iso).toBe("2028-03-01T");
+  });
+
+  it("ignores dates beyond the horizon and non-operating statuses", () => {
+    const rows = groupByFacility(
+      [
+        unit({
+          unitCode: "a",
+          status: "operating",
+          expectedClosure: { iso: "2045-01-01T", precision: "day" },
+        }),
+        unit({
+          unitCode: "b",
+          status: "committed",
+          expectedClosure: { iso: "2030-01-01T", precision: "day" },
+        }),
+      ],
+      new Map(),
+      AS_OF,
+    );
+    expect(rows[0].closing).toBeNull();
+  });
+
+  it("is null when no operating unit publishes a closure", () => {
+    const rows = groupByFacility(
+      [unit({ unitCode: "a", status: "operating" })],
+      new Map(),
+      AS_OF,
+    );
+    expect(rows[0].closing).toBeNull();
+  });
+});

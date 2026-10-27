@@ -137,27 +137,88 @@ function FilterMenu<T extends string>({
   );
 }
 
-// "Came online" as an inclusive date range. Native date inputs keep their
-// own keyboard behaviour (arrows step days), which is why the shared hook's
-// list-navigation keys aren't used here — only Escape closes
-function DateMenu({
+// One labelled From/To pair inside its own fieldset. min/max are optional so
+// "expected online" can leave the upper end unbounded
+function RangeFields({
   range,
+  min,
+  max,
+  onChange,
+}: {
+  range: DateRange;
+  min?: string;
+  max?: string;
+  onChange: (range: DateRange) => void;
+}) {
+  const fromId = useId();
+  const toId = useId();
+  const invalid =
+    range.from !== null && range.to !== null && range.from > range.to;
+  return (
+    <>
+      <div className="menu-date">
+        <label htmlFor={fromId}>From</label>
+        <input
+          id={fromId}
+          type="date"
+          min={min}
+          max={max}
+          value={range.from ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...range,
+              from: e.target.value === "" ? null : e.target.value,
+            })
+          }
+        />
+      </div>
+      <div className="menu-date">
+        <label htmlFor={toId}>To</label>
+        <input
+          id={toId}
+          type="date"
+          min={min}
+          max={max}
+          value={range.to ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...range,
+              to: e.target.value === "" ? null : e.target.value,
+            })
+          }
+        />
+      </div>
+      {invalid && (
+        <p className="menu-error" role="alert">
+          From is after To, so nothing matches
+        </p>
+      )}
+    </>
+  );
+}
+
+// Inclusive date ranges, one per lifecycle status. Native date inputs keep
+// their own keyboard behaviour (arrows step days), which is why the shared
+// hook's list-navigation keys aren't used here — only Escape closes
+function DateMenu({
+  filters,
   asOf,
   onChange,
   disabled,
 }: {
-  range: DateRange;
+  filters: Filters;
   asOf: string;
-  onChange: (range: DateRange) => void;
+  onChange: (filters: Filters) => void;
   disabled: boolean;
 }) {
   const { open, detailsProps } = useDropdown();
-  const fromId = useId();
-  const toId = useId();
   const asOfDay = isCalendarDate(asOf.slice(0, 10)) ? asOf.slice(0, 10) : "";
-  const active = !isEmptyRange(range);
-  const invalid =
-    range.from !== null && range.to !== null && range.from > range.to;
+  const activeCount = [
+    filters.commenced,
+    filters.expected,
+    filters.closed,
+  ].filter((r) => !isEmptyRange(r)).length;
+  const active = activeCount > 0;
 
   return (
     <details {...detailsProps} className={active ? "menu active" : "menu"}>
@@ -167,72 +228,71 @@ function DateMenu({
         aria-disabled={disabled || undefined}
       >
         Dates
-        {active && <span className="menu-count">1</span>}
+        {active && <span className="menu-count">{activeCount}</span>}
         <span aria-hidden="true"> ▾</span>
       </summary>
-      <fieldset className="menu-panel" disabled={disabled}>
-        <legend>Came online</legend>
-        <div className="menu-date">
-          <label htmlFor={fromId}>From</label>
-          <input
-            id={fromId}
-            type="date"
+      <div className="menu-panel" role="group">
+        <fieldset disabled={disabled}>
+          <legend>Came online</legend>
+          <RangeFields
+            range={filters.commenced}
             max={asOfDay}
-            value={range.from ?? ""}
-            onChange={(e) =>
-              onChange({
-                ...range,
-                from: e.target.value === "" ? null : e.target.value,
-              })
-            }
+            onChange={(commenced) => onChange({ ...filters, commenced })}
           />
-        </div>
-        <div className="menu-date">
-          <label htmlFor={toId}>To</label>
-          <input
-            id={toId}
-            type="date"
-            max={asOfDay}
-            value={range.to ?? ""}
-            onChange={(e) =>
-              onChange({
-                ...range,
-                to: e.target.value === "" ? null : e.target.value,
-              })
-            }
-          />
-        </div>
-        {invalid && (
-          <p className="menu-error" role="alert">
-            From is after To, so nothing matches
-          </p>
-        )}
-        <div className="menu-actions">
           <button
             type="button"
             className="menu-clear"
-            disabled={asOfDay === ""}
+            disabled={asOfDay === "" || disabled}
             onClick={() =>
-              onChange({ from: monthsBefore(asOfDay, 12), to: null })
+              onChange({
+                ...filters,
+                commenced: { from: monthsBefore(asOfDay, 12), to: null },
+              })
             }
           >
             Last 12 months
           </button>
+        </fieldset>
+        <fieldset disabled={disabled}>
+          <legend>Expected online</legend>
+          <RangeFields
+            range={filters.expected}
+            min={asOfDay}
+            onChange={(expected) => onChange({ ...filters, expected })}
+          />
+        </fieldset>
+        <fieldset disabled={disabled}>
+          <legend>Closed</legend>
+          <RangeFields
+            range={filters.closed}
+            max={asOfDay}
+            onChange={(closed) => onChange({ ...filters, closed })}
+          />
+        </fieldset>
+        <div className="menu-actions">
           <button
             type="button"
             className="menu-clear"
-            disabled={!active}
-            onClick={() => onChange({ from: null, to: null })}
+            disabled={!active || disabled}
+            onClick={() =>
+              onChange({
+                ...filters,
+                commenced: { from: null, to: null },
+                expected: { from: null, to: null },
+                closed: { from: null, to: null },
+              })
+            }
           >
             Clear
           </button>
         </div>
         <p className="muted menu-hint">
-          Operating and commissioning units whose commencement date is in the
-          range. Month- and year-only dates count from the start of their
-          period.
+          Each range applies to units with the matching status:
+          operating/commissioning for came online, committed for expected,
+          retired for closed. Month- and year-only dates count from the start of
+          their period.
         </p>
-      </fieldset>
+      </div>
     </details>
   );
 }
@@ -278,9 +338,9 @@ export function FilterBar({
         disabled={disabled}
       />
       <DateMenu
-        range={filters.commenced}
+        filters={filters}
         asOf={asOf}
-        onChange={(commenced) => onChange({ ...filters, commenced })}
+        onChange={onChange}
         disabled={disabled}
       />
       <label htmlFor={searchId} className="visually-hidden">
