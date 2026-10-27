@@ -349,8 +349,33 @@ export function FilterBar({
         disabled={disabled}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
       />
-      <button type="button" onClick={onReset} disabled={disabled || !canReset}>
-        Reset
+      <button
+        type="button"
+        className="icon-button"
+        onClick={(e) => {
+          e.currentTarget.classList.add("spinning");
+          onReset();
+        }}
+        onAnimationEnd={(e) => e.currentTarget.classList.remove("spinning")}
+        disabled={disabled || !canReset}
+        aria-label="Reset filters and view"
+        title="Reset"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M13.6 8a5.6 5.6 0 1 1-1.7-4" />
+          <path d="M14 1.8v2.6h-2.6" />
+        </svg>
       </button>
     </section>
   );

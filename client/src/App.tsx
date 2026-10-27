@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useId, useMemo, useState } from "react";
 import "./App.css";
 import { ERROR_COPY, useFacilities } from "./api/useFacilities";
 import { BreakdownPanel } from "./components/BreakdownPanel";
@@ -36,10 +36,28 @@ import {
   serializeState,
   toggleSelected,
 } from "./domain/url";
-import { useTheme } from "./theme";
+import { PALETTES, usePalette, useTheme, type Palette } from "./theme";
 
 // Leaflet is only downloaded when the map is first shown
 const FacilityMap = lazy(() => import("./components/FacilityMap"));
+
+const PALETTE_LABELS: Record<
+  NonNullable<Palette>,
+  { label: string; title: string }
+> = {
+  deutan: {
+    label: "Colour-blind mode: deuteranopia (red-green)",
+    title: "Deuteranopia (red-green)",
+  },
+  tritan: {
+    label: "Colour-blind mode: tritanopia (blue-yellow)",
+    title: "Tritanopia (blue-yellow)",
+  },
+  mono: {
+    label: "Colour-blind mode: achromatopsia (greyscale)",
+    title: "Achromatopsia (greyscale)",
+  },
+};
 
 // A stable empty array so memoized derivations don't rerun while loading
 const NO_ROWS: UnitRow[] = [];
@@ -64,6 +82,9 @@ const EXAMPLES: { question: string; query: string }[] = [
 export default function App() {
   const { result, retry } = useFacilities();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { palette, setPalette } = usePalette();
+  const [blink, setBlink] = useState<"closing" | "opening" | null>(null);
+  const eyeClipId = useId();
   // The view is read from the URL once, on mount, and written back from the
   // event handlers below; there's no effect watching either side
   const [state, setState] = useState<AppState>(() =>
@@ -167,36 +188,138 @@ export default function App() {
   return (
     <main aria-busy={result.status === "loading"}>
       <header className="masthead">
-        <h1>
-          <a
-            href="/"
-            onClick={(event) => {
-              event.preventDefault();
-              resetAll();
-            }}
-          >
-            Argus
-          </a>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={toggleTheme}
-            aria-label={
-              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-            }
-            title={
-              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-            }
-          >
-            <span
-              className={theme === "dark" ? "moon crescent" : "moon"}
-              aria-hidden="true"
+        <div>
+          <h1>
+            <a
+              href="/"
+              onClick={(event) => {
+                event.preventDefault();
+                resetAll();
+              }}
+            >
+              Argus
+            </a>
+            <button
+              type="button"
+              className={blink ? `theme-toggle ${blink}` : "theme-toggle"}
+              data-state={theme === "dark" ? "closed" : "open"}
+              onClick={() => {
+                // The lid drops over the pupil, the theme flips while it's shut
+                if (blink !== null) return;
+                if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                  toggleTheme();
+                  return;
+                }
+                if (theme === "dark") {
+                  toggleTheme();
+                  setBlink("opening");
+                } else {
+                  setBlink("closing");
+                }
+              }}
+              onAnimationEnd={(e) => {
+                if (e.animationName === "lid-down" && blink === "closing") {
+                  toggleTheme();
+                  setBlink(null);
+                } else if (
+                  e.animationName === "lid-up" &&
+                  blink === "opening"
+                ) {
+                  setBlink(null);
+                }
+              }}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              title={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+            >
+              <svg
+                className="eye"
+                viewBox="0 0 24 20"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <defs>
+                  <clipPath id={eyeClipId}>
+                    <path d="M2.5 10 C2.5 5 6.5 2 12 2 C17.5 2 21.5 5 21.5 10 C21.5 15 17.5 18 12 18 C6.5 18 2.5 15 2.5 10 Z" />
+                  </clipPath>
+                </defs>
+                <g className="eye-shapes">
+                  <path
+                    className="eye-open"
+                    d="M2.5 10 C2.5 5 6.5 2 12 2 C17.5 2 21.5 5 21.5 10 C21.5 15 17.5 18 12 18 C6.5 18 2.5 15 2.5 10 Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinejoin="round"
+                  />
+                  <ellipse
+                    className="eye-open"
+                    cx="12"
+                    cy="11"
+                    rx="5.5"
+                    ry="5"
+                    fill="currentColor"
+                  />
+                  <circle
+                    className="eye-open"
+                    cx="9.8"
+                    cy="8.8"
+                    r="1.4"
+                    fill="var(--paper)"
+                  />
+                  {/* The clip sits on an untransformed group: a clip-path on
+                    the rect itself would scale with it and lose the eye shape */}
+                  <g className="eye-open" clipPath={`url(#${eyeClipId})`}>
+                    <rect
+                      className="lid"
+                      x="0"
+                      y="-2"
+                      width="24"
+                      height="22"
+                      fill="currentColor"
+                    />
+                  </g>
+                  <path
+                    className="eye-closed"
+                    d="M4 13 Q12 17 20 13"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.8"
+                    strokeLinecap="round"
+                  />
+                </g>
+              </svg>
+            </button>
+          </h1>
+          <p className="muted">
+            Australian energy facilities, from OpenElectricity
+          </p>
+        </div>
+        <div
+          className="palette-switch"
+          role="group"
+          aria-label="Colour-blind modes"
+        >
+          {PALETTES.map((p) => (
+            <button
+              key={p}
+              type="button"
+              className="swatch"
+              data-palette={p}
+              aria-pressed={palette === p}
+              aria-label={PALETTE_LABELS[p].label}
+              data-tip={PALETTE_LABELS[p].title}
+              onClick={() => setPalette(palette === p ? null : p)}
             />
-          </button>
-        </h1>
-        <p className="muted">
-          Australian energy facilities, from OpenElectricity
-        </p>
+          ))}
+        </div>
       </header>
 
       <FilterBar
