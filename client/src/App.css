@@ -213,32 +213,33 @@ main > * {
    open group stays rendered but visibility-animated so it can peek open for
    ~500 ms per cycle while the closed line hides */
 .theme-toggle[data-state="open"] .lid {
-  animation: idle-blink 25s ease-in-out infinite;
+  animation: idle-blink 15s ease-in-out infinite;
 }
 
 .theme-toggle[data-state="closed"] .eye-open {
   display: inline;
   visibility: hidden;
-  animation: peek-show 25s step-end infinite;
+  animation: peek-show 15s step-end infinite;
 }
 
 .theme-toggle[data-state="closed"] .eye-closed {
-  animation: peek-hide 25s step-end infinite;
+  animation: peek-hide 15s step-end infinite;
 }
 
 .theme-toggle[data-state="closed"] .lid {
-  animation: peek-lid 25s ease-in-out infinite;
+  animation: peek-lid 15s ease-in-out infinite;
 }
 
+/* Percentages are of the 15s cycle: ~100ms blink, ~500ms peek */
 @keyframes idle-blink {
   0%,
   100% {
     transform: scaleY(0);
   }
-  0.4% {
+  0.67% {
     transform: scaleY(1);
   }
-  0.8% {
+  1.33% {
     transform: scaleY(0);
   }
 }
@@ -248,11 +249,11 @@ main > * {
   100% {
     visibility: hidden;
   }
-  0.1%,
-  2% {
+  0.17%,
+  3.33% {
     visibility: visible;
   }
-  2.1% {
+  3.5% {
     visibility: hidden;
   }
 }
@@ -262,11 +263,11 @@ main > * {
   100% {
     visibility: visible;
   }
-  0.1%,
-  2% {
+  0.17%,
+  3.33% {
     visibility: hidden;
   }
-  2.1% {
+  3.5% {
     visibility: visible;
   }
 }
@@ -276,11 +277,11 @@ main > * {
   100% {
     transform: scaleY(1);
   }
-  0.5%,
-  1.6% {
+  0.83%,
+  2.67% {
     transform: scaleY(0);
   }
-  2% {
+  3.33% {
     transform: scaleY(1);
   }
 }
