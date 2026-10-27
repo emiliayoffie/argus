@@ -1,7 +1,10 @@
 import { EMPTY_FILTERS } from "./filter";
 import {
+  DEFAULT_SORT,
   DIMENSIONS,
   MEASURES,
+  RECENT_MONTHS,
+  SORT_KEYS,
   STATES,
   STATUSES,
   TECH_GROUPS,
@@ -9,6 +12,8 @@ import {
   type Dimension,
   type Drilldown,
   type MapView,
+  type RecentMonths,
+  type Sort,
 } from "./types";
 
 export const SEARCH_MAX_LENGTH = 100;
@@ -20,6 +25,7 @@ export const DEFAULT_STATE: AppState = {
   drilldown: null,
   view: null,
   selected: [],
+  sort: DEFAULT_SORT,
 };
 
 // Facility codes are short upstream identifiers; anything else is ignored
@@ -90,7 +96,24 @@ function parseList<T extends string>(
   return out;
 }
 
-// Reads ?state=NSW,QLD&tech=battery&status=operating&q=bess&by=state&measure=mw&drill=state:NSW
+// sort=key:asc|desc. Anything malformed falls back to the default order
+function parseSort(value: string | null): Sort {
+  const separator = value?.indexOf(":") ?? -1;
+  if (!value || separator <= 0) return DEFAULT_SORT;
+  const key = parseOne(value.slice(0, separator), SORT_KEYS);
+  const direction = value.slice(separator + 1);
+  if (!key || (direction !== "asc" && direction !== "desc"))
+    return DEFAULT_SORT;
+  return { key, direction };
+}
+
+// recent=6|12|24, the only windows offered. Anything else is no window
+function parseRecent(value: string | null): RecentMonths {
+  if (!value) return null;
+  return RECENT_MONTHS.find((m) => String(m) === value) ?? null;
+}
+
+// Reads ?state=NSW,QLD&tech=battery&status=operating&q=bess&by=state&measure=mw&drill=state:NSW&sort=keyDate:desc&recent=12
 // Everything is untrusted: bad values fall back to defaults rather than erroring
 export function parseState(params: URLSearchParams): AppState {
   const groupBy =
@@ -115,12 +138,14 @@ export function parseState(params: URLSearchParams): AppState {
       techGroups: parseList(params.get("tech"), TECH_GROUPS),
       statuses: parseList(params.get("status"), STATUSES),
       search: (params.get("q") ?? "").trim().slice(0, SEARCH_MAX_LENGTH),
+      recentMonths: parseRecent(params.get("recent")),
     },
     groupBy,
     measure,
     drilldown,
     view: parseView(params.get("view")),
     selected: parseSelected(params.get("sel")),
+    sort: parseSort(params.get("sort")),
   };
 }
 
@@ -133,6 +158,8 @@ export function serializeState(state: AppState): string {
     params.set("tech", filters.techGroups.join(","));
   if (filters.statuses.length) params.set("status", filters.statuses.join(","));
   if (filters.search.trim()) params.set("q", filters.search.trim());
+  if (filters.recentMonths !== null)
+    params.set("recent", String(filters.recentMonths));
   if (state.groupBy !== DEFAULT_STATE.groupBy) params.set("by", state.groupBy);
   if (state.measure !== DEFAULT_STATE.measure)
     params.set("measure", state.measure);
@@ -140,5 +167,10 @@ export function serializeState(state: AppState): string {
     params.set("drill", `${state.drilldown.dim}:${state.drilldown.key}`);
   if (state.view) params.set("view", serializeView(state.view));
   if (state.selected.length) params.set("sel", state.selected.join(","));
+  if (
+    state.sort.key !== DEFAULT_SORT.key ||
+    state.sort.direction !== DEFAULT_SORT.direction
+  )
+    params.set("sort", `${state.sort.key}:${state.sort.direction}`);
   return params.toString();
 }

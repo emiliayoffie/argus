@@ -53,6 +53,25 @@ export function formatMwh(mwh: number): string {
   return `${integer.format(mwh)} MWh`;
 }
 
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+const isLeapYear = (year: number): boolean =>
+  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+// `ymd` minus `months`, clamped to the target month's last day. Pure string
+// and integer math, no Date: calendar strings must never shift by timezone
+export function monthsBefore(ymd: string, months: number): string {
+  const year = Number(ymd.slice(0, 4));
+  const month = Number(ymd.slice(5, 7));
+  const day = Number(ymd.slice(8, 10));
+  const total = year * 12 + (month - 1) - months;
+  const y = Math.floor(total / 12);
+  const m = (total % 12) + 1;
+  const maxDay = m === 2 ? (isLeapYear(y) ? 29 : 28) : DAYS_IN_MONTH[m - 1];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${String(y).padStart(4, "0")}-${pad(m)}-${pad(Math.min(day, maxDay))}`;
+}
+
 export const formatCount = (n: number): string => integer.format(n);
 
 // Instants (`created_at`, `fetchedAt`) are real points in time, so parsing

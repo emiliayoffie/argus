@@ -1,13 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { row } from "./__fixtures__/rows";
 import {
-  DEFAULT_SORT,
   facilityLifecycle,
   groupByFacility,
   keyDate,
   sortFacilities,
 } from "./facilities";
-import type { DatePrecision, SourceDate } from "./types";
+import { DEFAULT_SORT, type DatePrecision, type SourceDate } from "./types";
 
 const AS_OF = "2026-10-20T12:41:08+11:00";
 const d = (iso: string, precision: DatePrecision = "day"): SourceDate => ({
