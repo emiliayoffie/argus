@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { Sort, SortKey } from "../domain/facilities";
+import type { Sort, SortKey } from "../domain/types";
 import {
   formatCount,
   formatMw,

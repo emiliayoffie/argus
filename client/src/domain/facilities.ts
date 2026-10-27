@@ -4,6 +4,7 @@ import {
   TECH_GROUPS,
   type FacilityRow,
   type KeyDate,
+  type Sort,
   type UnitRow,
 } from "./types";
 
@@ -106,11 +107,6 @@ export function groupByFacility(
     };
   });
 }
-
-export type SortKey = "name" | "state" | "mw" | "units" | "keyDate";
-export type Sort = { key: SortKey; direction: "asc" | "desc" };
-
-export const DEFAULT_SORT: Sort = { key: "mw", direction: "desc" };
 
 // Returns a sorted copy; null values (unknown MW, missing dates) go last in
 // both directions. Array.sort is stable, so ties keep their original order

@@ -9,8 +9,9 @@ import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./url";
 
 const rows = facilitiesToRows(UpstreamEnvelope.parse(fixture).data);
+const AS_OF = "2026-10-22T03:00:00+10:00";
 const sentence = (state: AppState, drill: string | null = null) =>
-  headline(state, summarize(applyFilters(rows, state.filters)), drill);
+  headline(state, summarize(applyFilters(rows, state.filters, AS_OF)), drill);
 
 describe("headline", () => {
   it("describes the default view", () => {
@@ -27,6 +28,7 @@ describe("headline", () => {
         techGroups: ["battery"],
         statuses: ["operating", "commissioning"],
         search: "",
+        recentMonths: null,
       },
     };
     expect(sentence(state, "Commissioning")).toMatch(
@@ -42,12 +44,25 @@ describe("headline", () => {
         techGroups: ["solar", "wind", "battery"],
         statuses: ["committed"],
         search: "bogg",
+        recentMonths: null,
       },
     };
     expect(sentence(state)).toContain("solar, wind and battery facilit");
     expect(sentence(state)).toContain(
       "across Australia, committed, matching “bogg”",
     );
+  });
+
+  it("mentions the recent-online window", () => {
+    const state: AppState = {
+      ...DEFAULT_STATE,
+      filters: {
+        ...DEFAULT_STATE.filters,
+        techGroups: ["battery"],
+        recentMonths: 12,
+      },
+    };
+    expect(sentence(state)).toContain("online in the last 12 months");
   });
 
   it("omits figures that would be unknown", () => {
