@@ -55,10 +55,19 @@ function fail(
   code: ErrorCode,
   fields: Record<string, unknown> = {},
 ) {
+  // Every error passes through here, so the status, message, log line and
+  // headers are decided once per code (ERRORS table) instead of at each call site
   const { status, message } = ERRORS[code];
+  // Structured log: route, error code and whatever the caller measured
+  // (upstream status, duration). Never the token, upstream body or Zod messages
   log({ route: c.req.path, error: code, ...fields });
-  // prevents letting a browser or CDN from caching an error; a retry must hit upstream again
+  // no-store tells browsers, proxies and Cloudflare's edge not to keep a copy.
+  // Some error statuses are cacheable by default, so without this a transient
+  // upstream 429 could be replayed for minutes and "Retry" would never reach
+  // upstream again. Success responses are left cacheable for a future edge cache
   c.header("Cache-Control", "no-store");
+  // Fixed message from the table, not the upstream text: the client maps the
+  // code to its own copy and nothing from upstream reaches the browser
   return c.json<ErrorResponse>({ error: { code, message } }, status);
 }
 
