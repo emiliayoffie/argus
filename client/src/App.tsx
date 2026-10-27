@@ -233,7 +233,7 @@ export default function App() {
                   ? "Switch to light mode"
                   : "Switch to dark mode"
               }
-              title={
+              data-tip={
                 theme === "dark"
                   ? "Switch to light mode"
                   : "Switch to dark mode"
@@ -288,7 +288,7 @@ export default function App() {
                   </g>
                   <path
                     className="eye-closed"
-                    d="M4 13 Q12 17 20 13"
+                    d="M3.5 9 Q12 16 20.5 9"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.8"
