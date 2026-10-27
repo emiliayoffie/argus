@@ -99,7 +99,7 @@ export function FacilityTable({
   return (
     <section aria-labelledby="table-heading">
       <h2 id="table-heading" className="visually-hidden">
-        Facilities
+        Facility list
       </h2>
       <div className="table-wrap">
         <table>

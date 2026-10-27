@@ -1,4 +1,4 @@
-import { lazy, Suspense, useId, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useMemo, useState } from "react";
 import "./App.css";
 import { ERROR_COPY, useFacilities } from "./api/useFacilities";
 import { BreakdownPanel } from "./components/BreakdownPanel";
@@ -62,6 +62,10 @@ const PALETTE_LABELS: Record<
 // A stable empty array so memoized derivations don't rerun while loading
 const NO_ROWS: UnitRow[] = [];
 
+// Must match the lid-down / lid-up animation durations in App.css
+const LID_DOWN_MS = 130;
+const LID_UP_MS = 380;
+
 // The three customer questions as plain URL states: a starting point, not a mode
 const EXAMPLES: { question: string; query: string }[] = [
   {
@@ -85,6 +89,20 @@ export default function App() {
   const { theme, toggle: toggleTheme } = useTheme();
   const { palette, setPalette } = usePalette();
   const [blink, setBlink] = useState<"closing" | "opening" | null>(null);
+  // Timers, not animationend, finish the blink: the durations mirror
+  // lid-down / lid-up in App.css, and a hover animation on the same element
+  // can't strand the button mid-blink
+  useEffect(() => {
+    if (blink === null) return;
+    const timer = setTimeout(
+      () => {
+        if (blink === "closing") toggleTheme();
+        setBlink(null);
+      },
+      blink === "closing" ? LID_DOWN_MS : LID_UP_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [blink, toggleTheme]);
   const eyeClipId = useId();
   // The view is read from the URL once, on mount, and written back from the
   // event handlers below; there's no effect watching either side
@@ -224,17 +242,6 @@ export default function App() {
                   setBlink("opening");
                 } else {
                   setBlink("closing");
-                }
-              }}
-              onAnimationEnd={(e) => {
-                if (e.animationName === "lid-down" && blink === "closing") {
-                  toggleTheme();
-                  setBlink(null);
-                } else if (
-                  e.animationName === "lid-up" &&
-                  blink === "opening"
-                ) {
-                  setBlink(null);
                 }
               }}
               aria-label={

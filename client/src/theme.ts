@@ -74,9 +74,12 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
+// Reads the live attribute rather than closing over React state, so it is a
+// stable function and safe to use in effect dependencies
+const toggle = () => applyTheme(otherTheme(getSnapshot()));
+
 export function useTheme(): { theme: Theme; toggle: () => void } {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const toggle = () => applyTheme(otherTheme(getSnapshot()));
   return { theme, toggle };
 }
 
