@@ -12,6 +12,17 @@ main > * {
   min-width: 0;
 }
 
+/* The ready view sits in this wrapper so it can fade in as one; it must
+   mirror main's grid or the children lose their row spacing and min-width */
+.content {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.content > * {
+  min-width: 0;
+}
+
 .masthead h1 {
   font-size: 1.75rem;
   letter-spacing: 0.02em;
@@ -587,6 +598,68 @@ td .note {
 .status {
   padding: 1rem;
   color: var(--muted);
+}
+
+/* Loading skeleton: bone blocks in the shape of the page, one shared sweep */
+.skeleton {
+  filter: blur(0.6px);
+  display: grid;
+  gap: 1.25rem;
+}
+
+.skeleton > * {
+  min-width: 0;
+}
+
+.bone {
+  display: block;
+  border-radius: 6px;
+  background: var(--bone);
+  position: relative;
+  overflow: hidden;
+}
+
+.bone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bone-sheen),
+    transparent
+  );
+  animation: bone-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes bone-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.fade-in {
+  animation: fade-in 220ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone::after,
+  .fade-in {
+    animation: none;
+  }
 }
 
 .banner-error {

@@ -10,6 +10,8 @@
   --lavender: #7f6bb0;
   --lavender-soft: #efeaf7;
   --shadow: rgba(43, 38, 34, 0.12);
+  --bone: #ebe7e0;
+  --bone-sheen: rgba(255, 255, 255, 0.6);
   --radius: 6px;
 
   font-family:
@@ -37,6 +39,8 @@
   --lavender: #d3869b;
   --lavender-soft: #3c3836;
   --shadow: rgba(0, 0, 0, 0.45);
+  --bone: #3c3836;
+  --bone-sheen: rgba(80, 73, 69, 0.6);
 }
 
 * {

@@ -4,6 +4,7 @@ import { ERROR_COPY, useFacilities } from "./api/useFacilities";
 import { BreakdownPanel } from "./components/BreakdownPanel";
 import { FacilityTable, PAGE_SIZE } from "./components/FacilityTable";
 import { FilterBar } from "./components/FilterBar";
+import { PageSkeleton } from "./components/PageSkeleton";
 import { SummaryStrip } from "./components/SummaryStrip";
 import { groupBy, summarize } from "./domain/aggregate";
 import {
@@ -164,7 +165,7 @@ export default function App() {
   );
 
   return (
-    <main>
+    <main aria-busy={result.status === "loading"}>
       <header className="masthead">
         <h1>
           <a
@@ -208,9 +209,12 @@ export default function App() {
       />
 
       {result.status === "loading" && (
-        <p className="status" role="status" aria-live="polite">
-          Loading facilities from OpenElectricity…
-        </p>
+        <>
+          <p className="visually-hidden" role="status" aria-live="polite">
+            Loading facilities from OpenElectricity…
+          </p>
+          <PageSkeleton />
+        </>
       )}
 
       {result.status === "error" && (
@@ -225,7 +229,7 @@ export default function App() {
       )}
 
       {data && (
-        <>
+        <div className="fade-in content">
           <nav className="examples" aria-labelledby="examples-label">
             <p id="examples-label" className="muted">
               Start from a question
@@ -317,7 +321,16 @@ export default function App() {
             </div>
 
             {showMap && facilities.length > 0 && (
-              <Suspense fallback={<p className="status">Loading map…</p>}>
+              <Suspense
+                fallback={
+                  <>
+                    <p className="visually-hidden" role="status">
+                      Loading map…
+                    </p>
+                    <div className="bone map-canvas" aria-hidden="true" />
+                  </>
+                }
+              >
                 <FacilityMap
                   facilities={facilities}
                   view={state.view}
@@ -362,7 +375,7 @@ export default function App() {
               />
             )}
           </section>
-        </>
+        </div>
       )}
 
       <footer className="muted">
