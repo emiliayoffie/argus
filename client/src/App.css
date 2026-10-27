@@ -371,10 +371,12 @@ main > * {
 }
 
 .headline {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  max-width: 70ch;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  max-width: 44ch;
+  text-wrap: balance;
 }
 
 footer {
@@ -577,21 +579,48 @@ footer a {
 }
 
 .card {
-  padding: 1rem;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  padding: 1.1rem 1.2rem;
   background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) * 2);
+  box-shadow:
+    0 1px 2px var(--shadow),
+    0 12px 28px -20px var(--shadow);
 }
 
 .card h3 {
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
+/* The number is the point of the card, so it scales with the card's width
+   (container units) instead of sharing one fixed size. Cards that are only a
+   label and a number let the figure grow further and sink to the bottom so
+   it fills the space the taller MW card creates in the row */
 .card .value {
-  font-size: 1.75rem;
-  font-weight: 600;
+  margin-top: 0.2rem;
+  font-size: clamp(2.25rem, 15cqi, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-stat .value {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  font-size: clamp(3rem, 26cqi, 5rem);
+}
+
+.card-mw .value,
+.card-mwh .value {
+  color: var(--accent);
 }
 
 .card .split,

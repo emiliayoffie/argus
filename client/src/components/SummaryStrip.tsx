@@ -17,11 +17,11 @@ export function SummaryStrip({
       <h2 id="summary-heading" className="visually-hidden">
         Summary of the current selection
       </h2>
-      <div className="card">
+      <div className="card card-stat">
         <h3>Distinct facilities</h3>
         <p className="value">{formatCount(summary.facilityCount)}</p>
       </div>
-      <div className="card">
+      <div className="card card-stat">
         <h3>Matching units</h3>
         <p className="value">{formatCount(summary.unitCount)}</p>
       </div>
@@ -72,7 +72,7 @@ export function SummaryStrip({
         </details>
       </div>
       {summary.batteryUnits > 0 && (
-        <div className="card">
+        <div className="card card-mwh">
           <h3>Battery storage (MWh)</h3>
           <p className="value">{formatMwh(summary.batteryStorageMwh)}</p>
           <p className="muted">
