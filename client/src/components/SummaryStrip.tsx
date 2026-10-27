@@ -1,20 +1,13 @@
-import {
-  formatCount,
-  formatMw,
-  formatMwh,
-  formatSourceDate,
-} from "../domain/format";
-import { label, type RecentMonths, type Summary } from "../domain/types";
+import { formatCount, formatMw, formatMwh } from "../domain/format";
+import { label, type Summary } from "../domain/types";
 
 // Totals for the current selection
 export function SummaryStrip({
   summary,
-  recentMonths,
-  asOf,
+  hasDateFilter,
 }: {
   summary: Summary;
-  recentMonths: RecentMonths;
-  asOf: string;
+  hasDateFilter: boolean;
 }) {
   const noMw = summary.mwUnitCount === 0;
   return (
@@ -60,11 +53,10 @@ export function SummaryStrip({
             is the sum of retired unit registrations and may include capacity
             re-registered under a newer unit.
           </p>
-          {recentMonths !== null && asOf && (
+          {hasDateFilter && (
             <p className="muted">
-              Online window: the {recentMonths} months to{" "}
-              {formatSourceDate({ iso: asOf, precision: "day" })}. Month- and
-              year-only dates count from the start of their period.
+              Date filters: month- and year-only dates count from the start of
+              their period.
             </p>
           )}
         </details>

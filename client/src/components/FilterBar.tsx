@@ -1,9 +1,12 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { isCalendarDate, monthsBefore } from "../domain/format";
+import { isEmptyRange } from "../domain/filter";
 import {
   label,
   STATES,
   STATUSES,
   TECH_GROUPS,
+  type DateRange,
   type Dimension,
   type Filters,
 } from "../domain/types";
@@ -16,37 +19,17 @@ type Props = {
   onReset: () => void;
   canReset: boolean;
   disabled: boolean;
+  // Dataset date: bounds the pickers and anchors "Last 12 months"
+  asOf: string;
 };
 
-// A native <details> dropdown holding a checkbox list. OR within the menu;
-// the toolbar ANDs the menus together. Keyboard: Enter/Space opens and
-// focuses the first option, Up/Down/Home/End move, Space or Enter toggles,
-// Escape closes and returns focus to the button, Tabbing out or clicking
-// outside closes
-function FilterMenu<T extends string>({
-  title,
-  dim,
-  options,
-  selected,
-  onChange,
-  disabled,
-}: {
-  title: string;
-  dim: Dimension;
-  options: readonly T[];
-  selected: T[];
-  onChange: (next: T[]) => void;
-  disabled: boolean;
-}) {
+// The plumbing every <details> dropdown in the toolbar shares: open state,
+// close on outside pointerdown or on focus leaving, Escape closes and returns
+// focus to the summary. Per-menu key handling stays in the component so date
+// inputs can keep their native arrow-key behaviour
+function useDropdown() {
   const details = useRef<HTMLDetailsElement>(null);
   const [open, setOpen] = useState(false);
-
-  const focusables = () =>
-    Array.from(
-      details.current?.querySelectorAll<HTMLElement>(
-        "input:not(:disabled), button:not(:disabled)",
-      ) ?? [],
-    );
 
   const close = (returnFocus: boolean) => {
     const el = details.current;
@@ -70,12 +53,61 @@ function FilterMenu<T extends string>({
   }, []);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDetailsElement>) => {
-    if (!details.current?.open) return;
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && details.current?.open) {
       event.preventDefault();
       close(true);
-      return;
     }
+  };
+
+  const detailsProps = {
+    ref: details,
+    onToggle: (e: React.SyntheticEvent<HTMLDetailsElement>) =>
+      setOpen(e.currentTarget.open),
+    onKeyDown,
+    onBlur: (e: React.FocusEvent<HTMLDetailsElement>) => {
+      // Focus moved to something outside the menu (Tab out): close without
+      // stealing focus back. A blur with no target is ignored: iOS Safari
+      // doesn't focus a tapped control, so closing here would swallow the tap.
+      // Taps outside are handled by the document pointerdown listener
+      if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
+        close(false);
+    },
+  };
+
+  return { details, open, close, detailsProps };
+}
+
+// A native <details> dropdown holding a checkbox list. OR within the menu;
+// the toolbar ANDs the menus together. Keyboard: Enter/Space opens and
+// focuses the first option, Up/Down/Home/End move, Space or Enter toggles,
+// Escape closes and returns focus to the button, Tabbing out or clicking
+// outside closes
+function FilterMenu<T extends string>({
+  title,
+  dim,
+  options,
+  selected,
+  onChange,
+  disabled,
+}: {
+  title: string;
+  dim: Dimension;
+  options: readonly T[];
+  selected: T[];
+  onChange: (next: T[]) => void;
+  disabled: boolean;
+}) {
+  const { details, open, detailsProps } = useDropdown();
+
+  const focusables = () =>
+    Array.from(
+      details.current?.querySelectorAll<HTMLElement>(
+        "input:not(:disabled), button:not(:disabled)",
+      ) ?? [],
+    );
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDetailsElement>) => {
+    if (!details.current?.open) return;
     if (
       event.key === "Enter" &&
       event.target instanceof HTMLInputElement &&
@@ -103,23 +135,19 @@ function FilterMenu<T extends string>({
       checked ? [...selected, value] : selected.filter((v) => v !== value),
     );
 
+  const { onToggle, ...restDetailsProps } = detailsProps;
+
   return (
     <details
-      ref={details}
+      {...restDetailsProps}
       className={selected.length ? "menu active" : "menu"}
       onToggle={(e) => {
-        const isOpen = e.currentTarget.open;
-        setOpen(isOpen);
-        if (isOpen) focusables()[0]?.focus();
+        onToggle(e);
+        if (e.currentTarget.open) focusables()[0]?.focus();
       }}
-      onKeyDown={onKeyDown}
-      onBlur={(e) => {
-        // Focus moved to something outside the menu (Tab out): close without
-        // stealing focus back. A blur with no target is ignored: iOS Safari
-        // doesn't focus a tapped checkbox, so closing here would swallow the tap.
-        // Taps outside are handled by the document pointerdown listener
-        if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget))
-          close(false);
+      onKeyDown={(e) => {
+        detailsProps.onKeyDown(e);
+        if (!e.defaultPrevented) onKeyDown(e);
       }}
     >
       <summary
@@ -162,6 +190,106 @@ function FilterMenu<T extends string>({
   );
 }
 
+// "Came online" as an inclusive date range. Native date inputs keep their
+// own keyboard behaviour (arrows step days), which is why the shared hook's
+// list-navigation keys aren't used here — only Escape closes
+function DateMenu({
+  range,
+  asOf,
+  onChange,
+  disabled,
+}: {
+  range: DateRange;
+  asOf: string;
+  onChange: (range: DateRange) => void;
+  disabled: boolean;
+}) {
+  const { open, detailsProps } = useDropdown();
+  const fromId = useId();
+  const toId = useId();
+  const asOfDay = isCalendarDate(asOf.slice(0, 10)) ? asOf.slice(0, 10) : "";
+  const active = !isEmptyRange(range);
+  const invalid =
+    range.from !== null && range.to !== null && range.from > range.to;
+
+  return (
+    <details {...detailsProps} className={active ? "menu active" : "menu"}>
+      <summary
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-disabled={disabled || undefined}
+      >
+        Dates
+        {active && <span className="menu-count">1</span>}
+        <span aria-hidden="true"> ▾</span>
+      </summary>
+      <fieldset className="menu-panel" disabled={disabled}>
+        <legend>Came online</legend>
+        <div className="menu-date">
+          <label htmlFor={fromId}>From</label>
+          <input
+            id={fromId}
+            type="date"
+            max={asOfDay}
+            value={range.from ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...range,
+                from: e.target.value === "" ? null : e.target.value,
+              })
+            }
+          />
+        </div>
+        <div className="menu-date">
+          <label htmlFor={toId}>To</label>
+          <input
+            id={toId}
+            type="date"
+            max={asOfDay}
+            value={range.to ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...range,
+                to: e.target.value === "" ? null : e.target.value,
+              })
+            }
+          />
+        </div>
+        {invalid && (
+          <p className="menu-error" role="alert">
+            From is after To, so nothing matches
+          </p>
+        )}
+        <div className="menu-actions">
+          <button
+            type="button"
+            className="menu-clear"
+            disabled={asOfDay === ""}
+            onClick={() =>
+              onChange({ from: monthsBefore(asOfDay, 12), to: null })
+            }
+          >
+            Last 12 months
+          </button>
+          <button
+            type="button"
+            className="menu-clear"
+            disabled={!active}
+            onClick={() => onChange({ from: null, to: null })}
+          >
+            Clear
+          </button>
+        </div>
+        <p className="muted menu-hint">
+          Operating and commissioning units whose commencement date is in the
+          range. Month- and year-only dates count from the start of their
+          period.
+        </p>
+      </fieldset>
+    </details>
+  );
+}
+
 // Base filters as a slim toolbar: three menus, search, and the one Reset for
 // the whole view
 export function FilterBar({
@@ -170,6 +298,7 @@ export function FilterBar({
   onReset,
   canReset,
   disabled,
+  asOf,
 }: Props) {
   const searchId = useId();
   return (
@@ -201,21 +330,12 @@ export function FilterBar({
         onChange={(statuses) => onChange({ ...filters, statuses })}
         disabled={disabled}
       />
-      <label
-        className={
-          filters.recentMonths === 12 ? "toolbar-check active" : "toolbar-check"
-        }
-      >
-        <input
-          type="checkbox"
-          checked={filters.recentMonths === 12}
-          disabled={disabled}
-          onChange={(e) =>
-            onChange({ ...filters, recentMonths: e.target.checked ? 12 : null })
-          }
-        />
-        Online in the last 12 months
-      </label>
+      <DateMenu
+        range={filters.commenced}
+        asOf={asOf}
+        onChange={(commenced) => onChange({ ...filters, commenced })}
+        disabled={disabled}
+      />
       <label htmlFor={searchId} className="visually-hidden">
         Search facilities
       </label>
@@ -230,7 +350,7 @@ export function FilterBar({
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
       />
       <button type="button" onClick={onReset} disabled={disabled || !canReset}>
-        Reset view
+        Reset
       </button>
     </section>
   );

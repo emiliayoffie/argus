@@ -21,7 +21,8 @@ describe("parseState / serializeState", () => {
         techGroups: ["battery"],
         statuses: ["operating", "commissioning"],
         search: "bess",
-        recentMonths: 12,
+        recentMonths: null,
+        commenced: { from: "2025-10-22", to: "2026-01-01" },
       },
       groupBy: "state",
       measure: "facilities",
@@ -32,7 +33,7 @@ describe("parseState / serializeState", () => {
     };
     const query = serializeState(state);
     expect(query).toBe(
-      "state=NSW%2CQLD&tech=battery&status=operating%2Ccommissioning&q=bess&recent=12&by=state&measure=facilities&drill=state%3ANSW&view=-33.0864%2C138.5187%2C9&sel=HORNSDPR%2CNESBESS2&sort=keyDate%3Adesc",
+      "state=NSW%2CQLD&tech=battery&status=operating%2Ccommissioning&q=bess&commenced=2025-10-22..2026-01-01&by=state&measure=facilities&drill=state%3ANSW&view=-33.0864%2C138.5187%2C9&sel=HORNSDPR%2CNESBESS2&sort=keyDate%3Adesc",
     );
     expect(parse(query)).toEqual(state);
   });
@@ -94,16 +95,60 @@ describe("parseState / serializeState", () => {
     expect(parse("sort=keyDate").sort).toEqual(DEFAULT_SORT);
   });
 
-  it("round-trips the recent window and rejects other values", () => {
-    const state = {
-      ...DEFAULT_STATE,
-      filters: { ...DEFAULT_STATE.filters, recentMonths: 12 as const },
-    };
-    expect(serializeState(state)).toBe("recent=12");
+  it("parses recent= as an input-only shorthand that never serialises", () => {
     expect(parse("recent=12").filters.recentMonths).toBe(12);
     expect(parse("recent=24").filters.recentMonths).toBe(24);
     expect(parse("recent=7").filters.recentMonths).toBeNull();
     expect(parse("recent=").filters.recentMonths).toBeNull();
+    // It is resolved into `commenced` before use, so it is never written back
+    const state = {
+      ...DEFAULT_STATE,
+      filters: { ...DEFAULT_STATE.filters, recentMonths: 12 as const },
+    };
+    expect(serializeState(state)).toBe("");
+  });
+
+  it("round-trips the commenced range in all three forms", () => {
+    const withRange = (from: string | null, to: string | null) => ({
+      ...DEFAULT_STATE,
+      filters: { ...DEFAULT_STATE.filters, commenced: { from, to } },
+    });
+    expect(serializeState(withRange("2025-10-22", null))).toBe(
+      "commenced=2025-10-22..",
+    );
+    expect(serializeState(withRange(null, "2026-01-01"))).toBe(
+      "commenced=..2026-01-01",
+    );
+    expect(serializeState(withRange("2025-10-22", "2026-01-01"))).toBe(
+      "commenced=2025-10-22..2026-01-01",
+    );
+    expect(parse("commenced=2025-10-22..").filters.commenced).toEqual({
+      from: "2025-10-22",
+      to: null,
+    });
+    expect(parse("commenced=..2026-01-01").filters.commenced).toEqual({
+      from: null,
+      to: "2026-01-01",
+    });
+    expect(parse("commenced=2025-10-22..2026-01-01").filters.commenced).toEqual(
+      { from: "2025-10-22", to: "2026-01-01" },
+    );
+  });
+
+  it("treats non-calendar dates in commenced as open ends", () => {
+    expect(parse("commenced=2026-04-31..").filters.commenced).toEqual({
+      from: null,
+      to: null,
+    });
+    expect(parse("commenced=garbage").filters.commenced).toEqual({
+      from: null,
+      to: null,
+    });
+    // A single valid date without `..` is a one-sided from
+    expect(parse("commenced=2025-10-22").filters.commenced).toEqual({
+      from: "2025-10-22",
+      to: null,
+    });
   });
 });
 

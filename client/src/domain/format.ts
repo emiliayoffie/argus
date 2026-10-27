@@ -72,6 +72,23 @@ export function monthsBefore(ymd: string, months: number): string {
   return `${String(y).padStart(4, "0")}-${pad(m)}-${pad(Math.min(day, maxDay))}`;
 }
 
+// Strict YYYY-MM-DD with a real day in a real month (leap-aware). Anything
+// else — bad lengths, month 13, 31 April, a longer ISO string — is not a
+// calendar date
+export function isCalendarDate(ymd: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return false;
+  const month = Number(ymd.slice(5, 7));
+  const day = Number(ymd.slice(8, 10));
+  if (month < 1 || month > 12 || day < 1) return false;
+  const maxDay =
+    month === 2
+      ? isLeapYear(Number(ymd.slice(0, 4)))
+        ? 29
+        : 28
+      : DAYS_IN_MONTH[month - 1];
+  return day <= maxDay;
+}
+
 export const formatCount = (n: number): string => integer.format(n);
 
 // Instants (`created_at`, `fetchedAt`) are real points in time, so parsing

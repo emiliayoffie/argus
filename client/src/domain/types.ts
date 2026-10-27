@@ -109,10 +109,16 @@ export type UnitRow = {
   dataLastSeen: string | null;
 };
 
-// "Came online in the last N months" choices; only 12 is offered in the UI,
-// 6 and 24 are URL-only for now
+// "Came online in the last N months" choices. An input-only shorthand:
+// `recent=N` in a URL is resolved into `commenced` (as `asOf − N months`)
+// before use and is never written back to the URL
 export const RECENT_MONTHS = [6, 12, 24] as const;
 export type RecentMonths = (typeof RECENT_MONTHS)[number] | null;
+
+// An inclusive YYYY-MM-DD window for a unit's commencement date; either side
+// may be open. `from > to` is valid input and matches nothing
+export type DateRange = { from: string | null; to: string | null };
+export const EMPTY_RANGE: DateRange = { from: null, to: null };
 
 // Base filters. Empty list = no constraint. OR within a facet, AND across.
 export type Filters = {
@@ -121,8 +127,9 @@ export type Filters = {
   statuses: Status[];
   // Facility name or code, case-insensitive.
   search: string;
-  // Only units that came online within this many months of the dataset date
   recentMonths: RecentMonths;
+  // Only units that came online in this range
+  commenced: DateRange;
 };
 
 // Clicking a bar in the breakdown. Filters the rows one step further, after

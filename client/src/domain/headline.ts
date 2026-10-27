@@ -1,4 +1,4 @@
-import { formatCount, formatMw, formatMwh } from "./format";
+import { formatCount, formatMw, formatMwh, formatSourceDate } from "./format";
 import { label, type AppState, type Summary } from "./types";
 
 // "a", "a and b", "a, b and c"
@@ -38,10 +38,18 @@ export function headline(
   const search = filters.search.trim()
     ? `, matching “${filters.search.trim()}”`
     : "";
+  // The date range is written out in words; either side may be open
+  const day = (iso: string) =>
+    formatSourceDate({ iso, precision: "day" }) ?? iso;
+  const { from, to } = filters.commenced;
   const recent =
-    filters.recentMonths !== null
-      ? `, online in the last ${filters.recentMonths} months`
-      : "";
+    from !== null && to !== null
+      ? `, came online ${day(from)} – ${day(to)}`
+      : from !== null
+        ? `, came online from ${day(from)}`
+        : to !== null
+          ? `, came online until ${day(to)}`
+          : "";
   const narrowed = drilldownLabel ? ` (showing ${drilldownLabel})` : "";
 
   // Figures that would be unknown are left out rather than shown as 0

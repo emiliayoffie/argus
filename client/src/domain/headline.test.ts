@@ -9,9 +9,8 @@ import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./url";
 
 const rows = facilitiesToRows(UpstreamEnvelope.parse(fixture).data);
-const AS_OF = "2026-10-22T03:00:00+10:00";
 const sentence = (state: AppState, drill: string | null = null) =>
-  headline(state, summarize(applyFilters(rows, state.filters, AS_OF)), drill);
+  headline(state, summarize(applyFilters(rows, state.filters)), drill);
 
 describe("headline", () => {
   it("describes the default view", () => {
@@ -29,6 +28,7 @@ describe("headline", () => {
         statuses: ["operating", "commissioning"],
         search: "",
         recentMonths: null,
+        commenced: { from: null, to: null },
       },
     };
     expect(sentence(state, "Commissioning")).toMatch(
@@ -45,6 +45,7 @@ describe("headline", () => {
         statuses: ["committed"],
         search: "bogg",
         recentMonths: null,
+        commenced: { from: null, to: null },
       },
     };
     expect(sentence(state)).toContain("solar, wind and battery facilit");
@@ -53,16 +54,24 @@ describe("headline", () => {
     );
   });
 
-  it("mentions the recent-online window", () => {
-    const state: AppState = {
+  it("writes the commenced range in words, either side open", () => {
+    const withRange = (from: string | null, to: string | null): AppState => ({
       ...DEFAULT_STATE,
       filters: {
         ...DEFAULT_STATE.filters,
         techGroups: ["battery"],
-        recentMonths: 12,
+        commenced: { from, to },
       },
-    };
-    expect(sentence(state)).toContain("online in the last 12 months");
+    });
+    expect(sentence(withRange("2025-10-22", "2026-01-01"))).toContain(
+      "came online 22 Oct 2025 – 1 Jan 2026",
+    );
+    expect(sentence(withRange("2025-10-22", null))).toContain(
+      "came online from 22 Oct 2025",
+    );
+    expect(sentence(withRange(null, "2026-01-01"))).toContain(
+      "came online until 1 Jan 2026",
+    );
   });
 
   it("omits figures that would be unknown", () => {

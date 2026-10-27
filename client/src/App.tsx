@@ -11,7 +11,12 @@ import {
   groupByFacility,
   sortFacilities,
 } from "./domain/facilities";
-import { applyDrilldown, applyFilters } from "./domain/filter";
+import {
+  applyDrilldown,
+  applyFilters,
+  isEmptyRange,
+  resolveRecent,
+} from "./domain/filter";
 import { formatCount, formatInstant, formatMw } from "./domain/format";
 import { headline } from "./domain/headline";
 import {
@@ -70,7 +75,7 @@ export default function App() {
   const [locate, setLocate] = useState({ code: "", request: 0 });
   // Bumped by Reset so the map refits even if the facilities didn't change
   const [resetRequest, setResetRequest] = useState(0);
-  const { filters, groupBy: dim, measure, drilldown, sort } = state;
+  const { groupBy: dim, measure, drilldown, sort } = state;
 
   // Everything below is derived from the state above; no second copy of the
   // data is kept. `base` feeds the bars; `shown` is base narrowed by a bar.
@@ -79,11 +84,15 @@ export default function App() {
   const data = result.status === "ready" ? result.data : null;
   const rows = data?.rows ?? NO_ROWS;
   const asOf = data?.sourceCreatedAt ?? "";
-  const lifecycle = useMemo(() => facilityLifecycle(rows), [rows]);
-  const base = useMemo(
-    () => applyFilters(rows, filters, asOf),
-    [rows, filters, asOf],
+  // The `recent=N` shorthand resolves to a date range here; this resolved
+  // `filters` is what every downstream consumer sees (same reference when
+  // nothing needed resolving, so memo identities survive)
+  const filters = useMemo(
+    () => resolveRecent(state.filters, asOf),
+    [state.filters, asOf],
   );
+  const lifecycle = useMemo(() => facilityLifecycle(rows), [rows]);
+  const base = useMemo(() => applyFilters(rows, filters), [rows, filters]);
   const shown = useMemo(
     () => applyDrilldown(base, drilldown),
     [base, drilldown],
@@ -135,7 +144,7 @@ export default function App() {
     setShowMap(true);
     setResetRequest((n) => n + 1);
   };
-  const isDefault = serializeState(state) === "";
+  const isDefault = serializeState({ ...state, filters }) === "";
 
   // Highlight set: a comparison aid shared via the URL, never a filter
   const toggle = (code: string) =>
@@ -195,6 +204,7 @@ export default function App() {
         onReset={resetAll}
         canReset={!isDefault}
         disabled={result.status === "loading"}
+        asOf={asOf}
       />
 
       {result.status === "loading" && (
@@ -225,9 +235,17 @@ export default function App() {
                 key={e.query}
                 href={`?${e.query}`}
                 onClick={(event) => {
-                  // Same as following the link, without a full page reload
+                  // Same as following the link, without a full page reload.
+                  // The recent= shorthand resolves to a date range here so the
+                  // URL stays a faithful copy of the view (a recent= URL
+                  // loaded directly keeps the shorthand until the first
+                  // interaction, and re-resolves on each visit)
                   event.preventDefault();
-                  update(parseState(new URLSearchParams(e.query)));
+                  const next = parseState(new URLSearchParams(e.query));
+                  update({
+                    ...next,
+                    filters: resolveRecent(next.filters, asOf),
+                  });
                   setResetRequest((n) => n + 1);
                 }}
               >
@@ -238,15 +256,14 @@ export default function App() {
 
           <p className="headline">
             {headline(
-              state,
+              { ...state, filters },
               summary,
               drilldown ? label(drilldown.dim, drilldown.key) : null,
             )}
           </p>
           <SummaryStrip
             summary={summary}
-            recentMonths={filters.recentMonths}
-            asOf={asOf}
+            hasDateFilter={!isEmptyRange(filters.commenced)}
           />
 
           <BreakdownPanel
@@ -326,7 +343,7 @@ export default function App() {
                 </p>
                 {!isDefault && (
                   <button type="button" onClick={resetAll}>
-                    Reset view
+                    Reset
                   </button>
                 )}
               </div>
