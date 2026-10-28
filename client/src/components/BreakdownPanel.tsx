@@ -2,6 +2,7 @@ import { useId } from "react";
 import { DIM_ORDER } from "../domain/aggregate";
 import { formatCount, formatMw } from "../domain/format";
 import {
+  DIMENSION_LABELS,
   DIMENSIONS,
   label,
   MEASURES,
@@ -10,11 +11,6 @@ import {
   type Measure,
 } from "../domain/types";
 
-const DIMENSION_LABELS: Record<Dimension, string> = {
-  state: "State / region",
-  techGroup: "Technology",
-  status: "Status",
-};
 const MEASURE_LABELS: Record<Measure, string> = {
   mw: "MW",
   facilities: "Facilities",
@@ -131,11 +127,9 @@ export function BreakdownPanel({
       : formatCount(g.facilities);
 
   return (
+    // App renders the heading just above this card
     <section className="breakdown" aria-labelledby="breakdown-heading">
       <div className="breakdown-header">
-        <h2 id="breakdown-heading">
-          Breakdown by {DIMENSION_LABELS[groupBy].toLowerCase()}
-        </h2>
         <Toggle
           name="Group by"
           options={DIMENSIONS}
@@ -236,7 +230,7 @@ export function BreakdownPanel({
       <p className="muted">
         {measure === "facilities"
           ? "A facility with mixed technologies or statuses is counted in each group it matches, so groups can add up to more than the distinct total."
-          : "Registered MW of matching generator units; see “How is this calculated?” above."}
+          : "Registered MW of matching generator units; the Registered capacity card's ⓘ explains the counting."}
       </p>
     </section>
   );

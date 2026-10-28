@@ -5,7 +5,6 @@ import type { CSSProperties } from "react";
 const widths = (...ws: string[]): CSSProperties[] =>
   ws.map((width) => ({ width }));
 
-const EXAMPLE_WIDTHS = widths("17rem", "22rem", "20rem");
 const BAR_WIDTHS = widths("100%", "62%", "38%", "15%");
 const NAME_WIDTHS = widths(
   "85%",
@@ -18,50 +17,86 @@ const NAME_WIDTHS = widths(
   "78%",
 );
 
+function SectionHeadingBones() {
+  return (
+    <div className="section-heading">
+      <span className="bone" style={{ width: "4rem", height: "0.8rem" }} />
+      <span className="bone skel-h2" />
+      <div className="section-sub skel-sub">
+        <span className="bone" style={{ width: "60%", height: "0.85rem" }} />
+      </div>
+    </div>
+  );
+}
+
 export function PageSkeleton() {
   return (
     <div className="skeleton" aria-hidden="true">
-      <nav className="examples">
-        <span className="bone" style={{ width: "9rem", height: "0.9rem" }} />
-        {EXAMPLE_WIDTHS.map((style, i) => (
-          <span
-            key={i}
-            className="bone"
-            style={{ ...style, height: "1.1rem" }}
-          />
-        ))}
-      </nav>
-
-      <p className="headline">
+      <div className="headline-skel">
+        <span className="bone" style={{ width: "72%", height: "0.95em" }} />
+        <span className="bone" style={{ width: "46%", height: "0.95em" }} />
         <span
-          className="bone"
-          style={{ width: "70%", height: "1.25rem", marginBottom: "0.35rem" }}
+          className="bone skel-narrow"
+          style={{ width: "88%", height: "0.95em" }}
         />
-        <span className="bone" style={{ width: "45%", height: "1.25rem" }} />
-      </p>
+        <span
+          className="bone skel-narrow"
+          style={{ width: "54%", height: "0.95em" }}
+        />
+      </div>
 
       <section className="summary">
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} className="card">
-            <span
-              className="bone"
-              style={{ width: "8rem", height: "0.85rem" }}
-            />
-            <span
-              className="bone"
-              style={{ width: "6rem", height: "1.75rem", marginTop: "0.5rem" }}
-            />
+            <div className="card-head">
+              <span
+                className="bone"
+                style={{ width: "8rem", height: "0.8rem" }}
+              />
+            </div>
+            <span className="bone skel-card-value" />
+            {i === 2 && (
+              <>
+                <span
+                  className="bone"
+                  style={{ width: "100%", height: "8px" }}
+                />
+                <div className="skel-legend">
+                  {Array.from({ length: 4 }, (_, j) => (
+                    <span
+                      key={j}
+                      className="bone"
+                      style={{ width: "70%", height: "1.9rem" }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            {i !== 2 && (
+              <div className="skel-card-detail">
+                <span
+                  className="bone"
+                  style={{ width: "70%", height: "0.8rem" }}
+                />
+              </div>
+            )}
+            {i === 3 && (
+              <div className="skel-card-note">
+                <span
+                  className="bone"
+                  style={{ width: "55%", height: "0.7rem" }}
+                />
+              </div>
+            )}
           </div>
         ))}
       </section>
 
+      <SectionHeadingBones />
+
       <section className="breakdown">
         <div className="breakdown-header">
-          <span className="bone" style={{ width: "11rem", height: "1.1rem" }} />
-          <span
-            className="bone"
-            style={{ width: "9rem", height: "1.6rem", marginLeft: "auto" }}
-          />
+          <span className="bone" style={{ width: "9rem", height: "1.6rem" }} />
           <span className="bone" style={{ width: "7rem", height: "1.6rem" }} />
         </div>
         <ol className="bars">
@@ -89,8 +124,8 @@ export function PageSkeleton() {
       </section>
 
       <section className="results">
+        <SectionHeadingBones />
         <div className="results-header">
-          <span className="bone" style={{ width: "9rem", height: "1.1rem" }} />
           <span
             className="bone"
             style={{ width: "7rem", height: "2rem", marginLeft: "auto" }}

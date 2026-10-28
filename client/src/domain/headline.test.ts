@@ -3,14 +3,16 @@ import { UpstreamEnvelope } from "../../../server/src/contract";
 import fixture from "./__fixtures__/facilities.sample.json";
 import { summarize } from "./aggregate";
 import { applyFilters } from "./filter";
-import { headline } from "./headline";
+import { headline, headlineText } from "./headline";
 import { facilitiesToRows } from "./normalize";
 import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./url";
 
 const rows = facilitiesToRows(UpstreamEnvelope.parse(fixture).data);
-const sentence = (state: AppState, drill: string | null = null) =>
+const parts = (state: AppState, drill: string | null = null) =>
   headline(state, summarize(applyFilters(rows, state.filters)), drill);
+const sentence = (state: AppState, drill: string | null = null) =>
+  headlineText(parts(state, drill));
 
 describe("headline", () => {
   it("describes the default view", () => {
@@ -86,6 +88,17 @@ describe("headline", () => {
     expect(sentence(state)).toBe(
       "1 energy facility across Australia, matching “SLDCBLK”.",
     );
+    expect(parts(state).filter((p) => p.figure)).toHaveLength(1);
+  });
+
+  it("marks the count, MW and MWh as figures", () => {
+    const figures = parts(DEFAULT_STATE)
+      .filter((p) => p.figure)
+      .map((p) => p.text);
+    expect(figures).toHaveLength(3);
+    expect(figures[0]).toMatch(/^\d+$/);
+    expect(figures[1]).toMatch(/(MW|GW)$/);
+    expect(figures[2]).toMatch(/(MWh|GWh)$/);
   });
 });
 

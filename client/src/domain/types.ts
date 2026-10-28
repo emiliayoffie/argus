@@ -39,6 +39,13 @@ export type Status = (typeof STATUSES)[number];
 export const DIMENSIONS = ["state", "techGroup", "status"] as const;
 export type Dimension = (typeof DIMENSIONS)[number];
 
+// Column names for a dimension, as shown in toggles and headings
+export const DIMENSION_LABELS: Record<Dimension, string> = {
+  state: "State / region",
+  techGroup: "Technology",
+  status: "Status",
+};
+
 // What a breakdown bar measures: summed MW or distinct facilities.
 export const MEASURES = ["mw", "facilities"] as const;
 export type Measure = (typeof MEASURES)[number];

@@ -1,10 +1,21 @@
-import { lazy, Suspense, useEffect, useId, useMemo, useState } from "react";
+import {
+  Fragment,
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+} from "react";
 import "./App.css";
 import { ERROR_COPY, useFacilities } from "./api/useFacilities";
+import { BackToTop } from "./components/BackToTop";
 import { BreakdownPanel } from "./components/BreakdownPanel";
 import { FacilityTable, PAGE_SIZE } from "./components/FacilityTable";
+import type { Example } from "./components/ExamplesMenu";
 import { FilterBar } from "./components/FilterBar";
 import { PageSkeleton } from "./components/PageSkeleton";
+import { SectionHeading } from "./components/SectionHeading";
 import { SummaryStrip } from "./components/SummaryStrip";
 import { groupBy, summarize } from "./domain/aggregate";
 import {
@@ -22,6 +33,7 @@ import { formatCount, formatInstant, formatMw } from "./domain/format";
 import { downloadCsv, facilitiesToCsv } from "./domain/export";
 import { headline } from "./domain/headline";
 import {
+  DIMENSION_LABELS,
   label,
   type AppState,
   type Dimension,
@@ -42,22 +54,10 @@ import { PALETTES, usePalette, useTheme, type Palette } from "./theme";
 // Leaflet is only downloaded when the map is first shown
 const FacilityMap = lazy(() => import("./components/FacilityMap"));
 
-const PALETTE_LABELS: Record<
-  NonNullable<Palette>,
-  { label: string; title: string }
-> = {
-  deutan: {
-    label: "Colour-blind mode: deuteranopia (red-green)",
-    title: "Deuteranopia (red-green)",
-  },
-  tritan: {
-    label: "Colour-blind mode: tritanopia (blue-yellow)",
-    title: "Tritanopia (blue-yellow)",
-  },
-  mono: {
-    label: "Colour-blind mode: achromatopsia (greyscale)",
-    title: "Achromatopsia (greyscale)",
-  },
+const PALETTE_NAMES: Record<NonNullable<Palette>, string> = {
+  deutan: "deuteranopia (red-green)",
+  tritan: "tritanopia (blue-yellow)",
+  mono: "achromatopsia (greyscale)",
 };
 
 // A stable empty array so memoized derivations don't rerun while loading
@@ -68,18 +68,21 @@ const LID_DOWN_MS = 130;
 const LID_UP_MS = 380;
 
 // The three customer questions as plain URL states: a starting point, not a mode
-const EXAMPLES: { question: string; query: string }[] = [
+const EXAMPLES: Example[] = [
   {
     question: "Batteries recently online in NSW and QLD",
+    hint: "Battery · NSW, QLD · online in the last 12 months",
     query:
       "state=NSW,QLD&tech=battery&status=commissioning,operating&by=status&sort=keyDate:desc&recent=12",
   },
   {
     question: "Committed wind, solar and battery capacity, state by state",
+    hint: "Solar, wind, battery · committed · MW by state",
     query: "tech=solar,wind,battery&status=committed&by=state&split=techGroup",
   },
   {
     question: "The fossil fleet: what has retired and what still runs",
+    hint: "Coal, gas, distillate · MW by status",
     query: "tech=coal,gas,distillate&by=status&measure=mw&split=techGroup",
   },
 ];
@@ -104,6 +107,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [blink, toggleTheme]);
   const eyeClipId = useId();
+  const paletteLabelId = useId();
   // The view is read from the URL once, on mount, and written back from the
   // event handlers below; there's no effect watching either side
   const [state, setState] = useState<AppState>(() =>
@@ -195,6 +199,15 @@ export default function App() {
     setResetRequest((n) => n + 1);
   };
   const isDefault = serializeState({ ...state, filters }) === "";
+
+  // The recent= shorthand resolves to a date range here so the URL stays a
+  // faithful copy of the view (a recent= URL loaded directly keeps the
+  // shorthand until the first interaction, and re-resolves on each visit)
+  const pickExample = (query: string) => {
+    const next = parseState(new URLSearchParams(query));
+    update({ ...next, filters: resolveRecent(next.filters, asOf) });
+    setResetRequest((n) => n + 1);
+  };
 
   // Highlight set: a comparison aid shared via the URL, never a filter
   const toggle = (code: string) =>
@@ -322,20 +335,30 @@ export default function App() {
         <div
           className="palette-switch"
           role="group"
-          aria-label="Colour-blind modes"
+          aria-labelledby={paletteLabelId}
         >
-          {PALETTES.map((p) => (
-            <button
-              key={p}
-              type="button"
-              className="swatch"
-              data-palette={p}
-              aria-pressed={palette === p}
-              aria-label={PALETTE_LABELS[p].label}
-              data-tip={PALETTE_LABELS[p].title}
-              onClick={() => setPalette(palette === p ? null : p)}
-            />
-          ))}
+          <span id={paletteLabelId} className="palette-label">
+            Colour-blind palette
+          </span>
+          {PALETTES.map((p) => {
+            // The name states what a click does, so it follows the state
+            const tip =
+              palette === p
+                ? "Return to standard colours"
+                : `Enable ${PALETTE_NAMES[p]} palette`;
+            return (
+              <button
+                key={p}
+                type="button"
+                className="swatch"
+                data-palette={p}
+                aria-pressed={palette === p}
+                aria-label={tip}
+                data-tip={tip}
+                onClick={() => setPalette(palette === p ? null : p)}
+              />
+            );
+          })}
         </div>
       </header>
 
@@ -346,6 +369,8 @@ export default function App() {
         canReset={!isDefault}
         disabled={result.status === "loading"}
         asOf={asOf}
+        examples={EXAMPLES}
+        onPickExample={pickExample}
       />
 
       {result.status === "loading" && (
@@ -370,39 +395,22 @@ export default function App() {
 
       {data && (
         <div className="fade-in content">
-          <nav className="examples" aria-labelledby="examples-label">
-            <p id="examples-label" className="muted">
-              Start from a question
-            </p>
-            {EXAMPLES.map((e) => (
-              <a
-                key={e.query}
-                href={`?${e.query}`}
-                onClick={(event) => {
-                  // Same as following the link, without a full page reload.
-                  // The recent= shorthand resolves to a date range here so the
-                  // URL stays a faithful copy of the view (a recent= URL
-                  // loaded directly keeps the shorthand until the first
-                  // interaction, and re-resolves on each visit)
-                  event.preventDefault();
-                  const next = parseState(new URLSearchParams(e.query));
-                  update({
-                    ...next,
-                    filters: resolveRecent(next.filters, asOf),
-                  });
-                  setResetRequest((n) => n + 1);
-                }}
-              >
-                {e.question}
-              </a>
-            ))}
-          </nav>
-
           <p className="headline">
             {headline(
               { ...state, filters },
               summary,
               drilldown ? label(drilldown.dim, drilldown.key) : null,
+            ).map((part, i) =>
+              // Index keys are safe: the parts are a fixed-shape sequence with
+              // no per-item state. The sweep is pure CSS on .figure and
+              // repeats on a timer, so filter changes don't restart it
+              part.figure ? (
+                <strong key={i} className="figure">
+                  {part.text}
+                </strong>
+              ) : (
+                <Fragment key={i}>{part.text}</Fragment>
+              ),
             )}
           </p>
           <SummaryStrip
@@ -414,6 +422,15 @@ export default function App() {
             }
           />
 
+          <SectionHeading
+            number="01"
+            id="breakdown-heading"
+            title="Capacity breakdown"
+          >
+            {measure === "mw" ? "Registered MW" : "Distinct facilities"} by{" "}
+            {DIMENSION_LABELS[dim].toLowerCase()}. Click a bar to narrow
+            everything below it.
+          </SectionHeading>
           <BreakdownPanel
             groups={groups}
             groupBy={dim}
@@ -429,8 +446,11 @@ export default function App() {
           />
 
           <section className="results" aria-labelledby="results-heading">
+            <SectionHeading number="02" id="results-heading" title="Facilities">
+              Every facility in the current view, on the map and in the table.
+              Highlight rows or markers to compare them; export the list as CSV.
+            </SectionHeading>
             <div className="results-header">
-              <h2 id="results-heading">Facilities</h2>
               {drilldown && (
                 <button
                   type="button"
@@ -542,6 +562,8 @@ export default function App() {
         )}
         . Statuses are registry classifications, not live availability.
       </footer>
+
+      <BackToTop />
     </main>
   );
 }

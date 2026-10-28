@@ -11,6 +11,7 @@ import {
   type Filters,
 } from "../domain/types";
 import { SEARCH_MAX_LENGTH } from "../domain/url";
+import { ExamplesMenu, type Example } from "./ExamplesMenu";
 import { useDropdown } from "../useDropdown";
 
 type Props = {
@@ -22,6 +23,9 @@ type Props = {
   disabled: boolean;
   // Dataset date: bounds the pickers and anchors "Last 12 months"
   asOf: string;
+  // Starting-point questions, offered in a menu beside the search box
+  examples: readonly Example[];
+  onPickExample: (query: string) => void;
 };
 
 // A native <details> dropdown holding a checkbox list. OR within the menu;
@@ -306,6 +310,8 @@ export function FilterBar({
   canReset,
   disabled,
   asOf,
+  examples,
+  onPickExample,
 }: Props) {
   const searchId = useId();
   return (
@@ -355,6 +361,11 @@ export function FilterBar({
         maxLength={SEARCH_MAX_LENGTH}
         disabled={disabled}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
+      />
+      <ExamplesMenu
+        examples={examples}
+        disabled={disabled}
+        onPick={onPickExample}
       />
       <button
         type="button"

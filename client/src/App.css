@@ -1,7 +1,8 @@
 main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
+  /* Bottom room keeps the floating back-to-top button off the last row */
+  padding: 1.5rem 1.5rem 4.5rem;
   display: grid;
   gap: 1.25rem;
 }
@@ -67,8 +68,16 @@ main > * {
    that palette would use in the current theme, so each previews itself */
 .palette-switch {
   display: flex;
+  align-items: center;
   gap: 0.4rem;
   padding-top: 0.7rem;
+}
+
+.palette-label {
+  margin-right: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .swatch {
@@ -111,6 +120,28 @@ main > * {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
   box-shadow: 0 0 0 1px var(--paper);
+  animation: ring-in 180ms ease-out;
+}
+
+@keyframes ring-in {
+  from {
+    outline-offset: 0;
+    outline-color: transparent;
+  }
+  to {
+    outline-offset: 2px;
+    outline-color: var(--ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch[aria-pressed="true"] {
+    animation: none;
+  }
+
+  .swatch {
+    transition: none;
+  }
 }
 
 .swatch:hover {
@@ -359,24 +390,147 @@ main > * {
   }
 }
 
-.examples {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 1rem;
+.menu.examples summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent);
+  font-weight: 600;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
-.examples a {
-  color: var(--accent);
+.menu.examples summary:hover,
+.menu.examples[open] summary {
+  border-color: var(--accent);
+}
+
+.menu.examples summary[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Hangs from the button's right edge, inside the toolbar's stacking context */
+.menu-panel.examples-panel {
+  left: auto;
+  right: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  min-width: 0;
+  padding: 0.5rem;
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: 0 16px 40px var(--shadow);
+}
+
+.examples-title {
+  margin: 0;
+  padding: 0.3rem 0.6rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.examples-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.examples-panel a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.examples-panel a:hover,
+.examples-panel a:focus-visible {
+  background: var(--ivory);
+}
+
+.examples-q {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.examples-hint {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.examples-panel a svg {
+  flex: none;
+  stroke: var(--accent);
+}
+
+.headline,
+.headline-skel {
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  line-height: 1.12;
 }
 
 .headline {
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  max-width: 44ch;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   text-wrap: balance;
+  color: var(--ink);
+}
+
+/* "129.0 GW" stays together. One 2.1 s sweep at the start of every 10 s
+   cycle; both ends of the gradient are solid accent, so the reset is
+   invisible */
+.headline .figure {
+  --gloss: color-mix(in srgb, var(--accent) 45%, white);
+  color: var(--accent);
+  white-space: nowrap;
+  background-image: linear-gradient(
+    105deg,
+    var(--accent) 0 38%,
+    var(--gloss) 48%,
+    var(--accent) 58% 100%
+  );
+  background-size: 280% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 10s ease-in-out 0.65s infinite;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 100% 0;
+  }
+  21%,
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .headline .figure {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* One bone per line: 0.95em bones plus 0.17em of gap/padding fill the 1.12em
+   line height, so n bones take the same height as n lines of text */
+.headline-skel {
+  display: grid;
+  gap: 0.17em;
+  padding-bottom: 0.17em;
+}
+
+.headline-skel .skel-narrow {
+  display: none;
 }
 
 footer {
@@ -574,84 +728,201 @@ footer a {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+@media (max-width: 1000px) {
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .card {
-  container-type: inline-size;
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: 1.1rem 1.2rem;
+  min-height: 11rem;
+  padding: 1rem 1.1rem 0.95rem;
   background: var(--paper);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) * 2);
-  box-shadow:
-    0 1px 2px var(--shadow),
-    0 12px 28px -20px var(--shadow);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.card-head {
+  min-height: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .card h3 {
+  margin: 0;
   font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-/* The number is the point of the card, so it scales with the card's width
-   (container units) instead of sharing one fixed size. Cards that are only a
-   label and a number let the figure grow further and sink to the bottom so
-   it fills the space the taller MW card creates in the row */
+/* One size for all four cards: the figures are comparable, so none of them
+   scales to fill its card */
 .card .value {
-  margin-top: 0.2rem;
-  font-size: clamp(2.25rem, 15cqi, 3.25rem);
-  font-weight: 700;
+  margin: 0.85rem 0 0.7rem;
+  font-size: clamp(2rem, 3.1vw, 2.9rem);
+  font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.card-stat .value {
-  margin-top: auto;
-  padding-top: 0.5rem;
-  font-size: clamp(3rem, 26cqi, 5rem);
-}
-
-.card-mw .value,
-.card-mwh .value {
+.card .value.accent {
   color: var(--accent);
 }
 
-.card .split,
-.card details {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
+.card-detail {
+  margin: auto 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
-.card summary {
-  cursor: pointer;
+.card-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
-/* The MW explainer floats over the page instead of stretching the card */
-.info {
-  position: relative;
+.status-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
+.status-bar > span {
+  display: block;
+  height: 100%;
+}
+
+.status-legend {
+  margin: auto 0 0;
+  padding: 0.6rem 0 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Two lines per entry (dot and status over the figure) so four statuses
+   fit a narrow card without clipping */
+.status-legend li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.35rem;
+  line-height: 1.25;
+}
+
+.status-legend .num {
+  grid-column: 2;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-bar .status-operating,
+.status-legend .status-operating {
+  background: var(--status-operating);
+}
+
+.status-bar .status-commissioning,
+.status-legend .status-commissioning {
+  background: var(--status-commissioning);
+}
+
+.status-bar .status-committed,
+.status-legend .status-committed {
+  background: var(--status-committed);
+}
+
+.status-bar .status-retired,
+.status-legend .status-retired {
+  background: var(--status-retired);
+}
+
+.status-bar .status-other,
+.status-legend .status-other {
+  background: var(--muted);
+}
+
+/* The card is the positioning context for the explainer panel */
+.info {
+  position: static;
+}
+
+.info summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.info summary::-webkit-details-marker {
+  display: none;
+}
+
+.info summary:hover,
+.info[open] summary {
+  color: var(--accent);
+}
+
+.info summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.info summary::after {
+  left: auto;
+  right: 0;
+}
+
+.info[open] summary::after {
+  display: none;
+}
+
+/* Spans the card so it can't run off the viewport for the first or last
+   card, and floats over the content instead of stretching the row */
 .info-panel {
   position: absolute;
-  top: calc(100% + 0.3rem);
-  left: 0;
+  top: 2.6rem;
+  left: 0.6rem;
+  right: 0.6rem;
   z-index: 1000;
-  width: min(26rem, calc(100vw - 2rem));
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--paper);
   box-shadow: 0 6px 20px var(--shadow);
-  font-size: 0.9rem;
-  line-height: normal;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.info-panel p {
+  margin: 0;
+}
+
+.info-panel p + p {
+  margin-top: 0.5rem;
 }
 
 /* Breakdown */
@@ -670,11 +941,6 @@ footer a {
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
-}
-
-.breakdown-header h2 {
-  font-size: 1.1rem;
-  margin-right: auto;
 }
 
 .toggle-field {
@@ -823,9 +1089,123 @@ footer a {
   gap: 0.5rem;
 }
 
-.results-header h2 {
-  font-size: 1.1rem;
-  margin-right: auto;
+.results-header > button:last-child {
+  margin-left: auto;
+}
+
+/* Floating back-to-top: charcoal disc with a cream arrow. Hidden via
+   visibility so it's out of the tab order until the page has scrolled a
+   screen; the 0s/200ms visibility transition delays hiding until the fade
+   ends and shows immediately */
+.back-to-top {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  /* Above Leaflet panes (400+), below the sticky toolbar and menus (1100) */
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: var(--ink);
+  color: var(--ivory);
+  box-shadow: 0 6px 20px var(--shadow);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out,
+    visibility 0s linear 200ms;
+}
+
+.back-to-top[data-visible="true"] {
+  opacity: 0.9;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.back-to-top:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.back-to-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dark theme: --ink is cream there, so use the card charcoal with a hairline */
+:root[data-theme="dark"] .back-to-top {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top,
+  .back-to-top:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Editorial section heading: small accent number, hairline rules, title
+   subordinate to the headline */
+.section-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 1rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.section-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.section-number::after {
+  content: "";
+  width: 2.5rem;
+  height: 1px;
+  background: var(--border);
+}
+
+.section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.section-heading h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.section-sub {
+  grid-column: 2;
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 60ch;
 }
 
 .chip {
@@ -1072,6 +1452,51 @@ td .note {
   min-width: 0;
 }
 
+/* Heights mirror the real heading's line boxes so the page doesn't shift
+   when the data arrives */
+.skel-h2 {
+  width: 13rem;
+  height: calc(1.35rem * 1.45);
+  background-clip: content-box;
+  padding-block: 0.15rem;
+}
+
+.skel-sub {
+  display: flex;
+  align-items: center;
+  min-height: 1.35rem;
+}
+
+.skel-card-value {
+  width: 55%;
+  height: clamp(2rem, 3.1vw, 2.9rem);
+  margin: 0.85rem 0 0.7rem;
+}
+
+/* Line boxes sized like the real detail and note text, so the cards keep
+   their height when the data arrives */
+.skel-card-detail {
+  display: flex;
+  align-items: center;
+  min-height: 1.2rem;
+  margin-top: auto;
+}
+
+.skel-card-note {
+  display: flex;
+  align-items: center;
+  min-height: 1.1rem;
+  margin-top: 0.15rem;
+}
+
+.skel-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 0.5rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+}
+
 .bone {
   display: block;
   border-radius: 6px;
@@ -1136,7 +1561,52 @@ td .note {
 /* Last in the file so it wins the cascade over the desktop rules above */
 @media (max-width: 640px) {
   main {
-    padding: 1rem;
+    padding: 1rem 1rem 4.5rem;
+  }
+
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stacked cards don't need to match a neighbour's height */
+  .card {
+    min-height: 0;
+  }
+
+  /* The visible label would squeeze the subtitle onto a third line; it stays
+     available to assistive tech as the group's name */
+  .palette-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .section-heading {
+    column-gap: 0.75rem;
+  }
+
+  .section-heading h2 {
+    font-size: 1.2rem;
+  }
+
+  .section-number::after {
+    width: 1.25rem;
+  }
+
+  .skel-h2 {
+    height: calc(1.2rem * 1.45);
+  }
+
+  .skel-sub {
+    min-height: 2.7rem;
+  }
+
+  /* The headline wraps to about four lines on a phone */
+  .headline-skel .skel-narrow {
+    display: block;
   }
 
   .bar {
@@ -1152,6 +1622,13 @@ td .note {
     position: static;
   }
 
+  /* Same specificity as the desktop rule, so restate the spanning panel */
+  .menu-panel.examples-panel {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+
   /* Panel spans the toolbar width and scrolls instead of overflowing */
   .menu-panel {
     left: 1rem;
@@ -1164,12 +1641,6 @@ td .note {
   .menu-panel label {
     padding: 0.5rem 0;
     white-space: normal;
-  }
-
-  .info-panel {
-    left: 0;
-    right: 0;
-    width: auto;
   }
 
   /* The "+n unknown" note would push the bar row past the viewport; the
