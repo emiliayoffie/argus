@@ -752,7 +752,7 @@ footer a {
   border-radius: 999px;
   background: var(--ivory);
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -880,7 +880,7 @@ footer a {
 
 .card h3 {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1037,6 +1037,13 @@ footer a {
   line-height: 1.4;
 }
 
+/* A closed <details> still lays out its contents (content-visibility), and
+   the panel's containing block is then the tiny details slot, not the card:
+   its text would stick out past the viewport. Hide it outright */
+.info:not([open]) .info-panel {
+  display: none;
+}
+
 .info-panel p {
   margin: 0;
 }
@@ -1053,7 +1060,16 @@ footer a {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+}
+
+/* Children may shrink below their content width; otherwise a wide control
+   or bar row would stretch the card past the viewport */
+.breakdown > *,
+.breakdown-geo > *,
+.bars > li {
+  min-width: 0;
 }
 
 .breakdown-header {
@@ -1183,7 +1199,7 @@ footer a {
   display: grid;
   gap: 0.15rem;
   margin-top: 0.5rem;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -1248,7 +1264,7 @@ footer a {
 
 .bar-note {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   line-height: 1.2;
   color: var(--muted);
 }
@@ -1897,13 +1913,52 @@ td .note {
     display: block;
   }
 
+  /* Label and figure share the top line and may wrap; the bar runs the
+     full width below, so a long value can never push the row sideways */
   .bar {
-    grid-template-columns: 6rem 1fr 4.5rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.6rem;
+  }
+
+  .bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .bar-label,
+  .bar-value {
+    min-width: 0;
+  }
+
+  .bar-value {
+    white-space: normal;
+  }
+
+  /* One segmented control per row, label above; the buttons share the
+     width and their text may wrap to a second line */
+  .toggle-field {
+    display: grid;
+    gap: 0.3rem;
+    width: 100%;
+  }
+
+  .toggle {
+    display: flex;
+    width: 100%;
+  }
+
+  .toggle button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.25rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    white-space: normal;
   }
 
   /* Map above the bars, narrower than full width so it stays an inset */
   .breakdown-geo {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .state-map {
@@ -1947,14 +2002,8 @@ td .note {
     white-space: normal;
   }
 
-  /* The "+n unknown" note would push the bar row past the viewport; the
-     full wording stays in the bar's title */
-  .bar-note {
-    display: none;
-  }
-
-  /* The share widens the value column past the panel at this width; a second
-     line keeps the auto column narrow instead */
+  /* The share gets its own line under the figure; the "+n unknown" note
+     stays visible now that the value column can wrap */
   .bar-share {
     display: block;
     font-size: 0.75rem;
