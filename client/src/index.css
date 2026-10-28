@@ -3,6 +3,9 @@
   --ink: #292622;
   --muted: #6c5f58;
   --border: #ddd4ca;
+  /* Text and date inputs are identified by their outline alone, so it needs
+     3:1 against the page (WCAG 1.4.11); dividers and cards keep --border */
+  --field-border: #8f8379;
   --paper: #ffffff;
   --ivory: #faf8f5;
   --accent: #cc285e;
@@ -71,6 +74,7 @@
   --ink: #ebdbb2;
   --muted: #a89984;
   --border: #504945;
+  --field-border: #928374;
   --paper: #32302f;
   --ivory: #282828;
   --accent: #8fd3c5;
@@ -112,17 +116,28 @@
   --example-soft: var(--accent-soft);
 }
 
+/* The badge fills are light in dark mode, so their numbers are dark: white
+   on them measured 1.8-2.8:1 */
+:root[data-theme="dark"] {
+  --filter-badge-ink: #1d2021;
+}
+
 /* Colour-vision palettes: each overrides the accent, lavender and status
    hues for the active theme only */
 :root[data-palette="deutan"] {
-  --accent: #d55e00;
+  /* Okabe–Ito vermilion and reddish purple, deepened to 4.5:1 for text */
+  --accent: #a84a00;
   --accent-soft: #fbe9dd;
-  --lavender: #cc79a7;
+  --lavender: #9c4479;
   --lavender-soft: #f7e6ef;
   --status-operating: #009e73;
   --status-commissioning: #e69f00;
   --status-committed: #0072b2;
-  --status-retired: #8d8079;
+  /* Okabe–Ito black and reddish purple: the warm grey retired collapsed into
+     operating's bluish green under simulated deuteranopia (ΔE 3), and the
+     default violet mixed sat close to committed blue (ΔE 10); now ≥ 18 */
+  --status-retired: #000000;
+  --status-mixed: #cc79a7;
   --ivory: #fbf7ef;
   --paper: #fffdf8;
   --border: #e2d8c8;
@@ -138,6 +153,7 @@
   --status-commissioning: #f2c14e;
   --status-committed: #56b4e9;
   --status-retired: #928374;
+  --status-mixed: var(--lavender);
   --ivory: #2a2521;
   --paper: #342e29;
   --border: #4e443c;
@@ -153,6 +169,7 @@
   --status-commissioning: #e85d75;
   --status-committed: #1f4e79;
   --status-retired: #8d8079;
+  --status-mixed: #333333;
   --ivory: #f8f5f7;
   --paper: #fffcfe;
   --border: #ddd3da;
@@ -168,6 +185,7 @@
   --status-commissioning: #ff93a8;
   --status-committed: #7fb3e0;
   --status-retired: #928374;
+  --status-mixed: #c9b6ff;
   --ivory: #27242a;
   --paper: #312d35;
   --border: #4b454f;

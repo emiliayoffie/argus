@@ -660,7 +660,7 @@ footer a {
   width: 100%;
   min-width: 0;
   padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius);
   background: var(--paper);
   color: var(--ink);
@@ -839,7 +839,7 @@ footer a {
   flex: 1 1 14rem;
   min-width: 10rem;
   padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius);
   background: var(--paper);
 }

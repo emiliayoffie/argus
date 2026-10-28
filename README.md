@@ -45,7 +45,7 @@ Everything on the page describes one selection, and the URL always matches the s
 - **The headline and four cards** sum the selection: facilities, units, registered capacity (with a stacked bar by status) and battery storage. Each card's ⓘ explains how the number is calculated and what was left out.
 - **Capacity breakdown** groups the selection by state, technology or status, in MW or facilities, optionally split by a second dimension. Grouped by state, a small shaded map of Australia sits beside the bars, and hovering a state highlights its bar and vice versa. Clicking a bar or a state narrows the cards, map and table without hiding the other bars.
 - **Map** plots one marker per facility in the selection; it collapses without losing its position. **Facilities** lists the same selection in a sortable, paginated table. Click rows or markers to highlight facilities for comparison; totals never change. **Export CSV** writes every listed facility (all pages, after filters and drilldown) with dates and their precision.
-- The eye next to the wordmark switches light and dark mode; the dots at the top right switch to deuteranopia, tritanopia or greyscale palettes, which recolour the markers, legends and map tiles.
+- The eye next to the wordmark switches light and dark mode; the dots at the top right switch to deuteranopia, tritanopia or greyscale palettes, which recolour the charts, state map, markers, legends and map tiles. Text, badges and input outlines meet WCAG AA contrast in both themes and every palette.
 
 ## How it's built
 
