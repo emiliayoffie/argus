@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { isCalendarDate, monthsBefore } from "../domain/format";
 import { isEmptyRange } from "../domain/filter";
 import {
@@ -150,37 +150,39 @@ function RangeFields({
     range.from !== null && range.to !== null && range.from > range.to;
   return (
     <>
-      <div className="menu-date">
-        <label htmlFor={fromId}>From</label>
-        <input
-          id={fromId}
-          type="date"
-          min={min}
-          max={max}
-          value={range.from ?? ""}
-          onChange={(e) =>
-            onChange({
-              ...range,
-              from: e.target.value === "" ? null : e.target.value,
-            })
-          }
-        />
-      </div>
-      <div className="menu-date">
-        <label htmlFor={toId}>To</label>
-        <input
-          id={toId}
-          type="date"
-          min={min}
-          max={max}
-          value={range.to ?? ""}
-          onChange={(e) =>
-            onChange({
-              ...range,
-              to: e.target.value === "" ? null : e.target.value,
-            })
-          }
-        />
+      <div className="dates-row">
+        <div className="menu-date">
+          <label htmlFor={fromId}>From</label>
+          <input
+            id={fromId}
+            type="date"
+            min={min}
+            max={max}
+            value={range.from ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...range,
+                from: e.target.value === "" ? null : e.target.value,
+              })
+            }
+          />
+        </div>
+        <div className="menu-date">
+          <label htmlFor={toId}>To</label>
+          <input
+            id={toId}
+            type="date"
+            min={min}
+            max={max}
+            value={range.to ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...range,
+                to: e.target.value === "" ? null : e.target.value,
+              })
+            }
+          />
+        </div>
       </div>
       {invalid && (
         <p className="menu-error" role="alert">
@@ -191,9 +193,10 @@ function RangeFields({
   );
 }
 
-// Inclusive date ranges, one per lifecycle status. Native date inputs keep
-// their own keyboard behaviour (arrows step days), which is why the shared
-// hook's list-navigation keys aren't used here — only Escape closes
+// Inclusive date ranges, one per lifecycle status; a unit in any filled
+// range is shown. Native date inputs keep their own keyboard behaviour
+// (arrows step days), which is why the shared hook's list-navigation keys
+// aren't used here — only Escape closes
 function DateMenu({
   filters,
   asOf,
@@ -206,6 +209,9 @@ function DateMenu({
   disabled: boolean;
 }) {
   const { open, detailsProps } = useDropdown();
+  const [about, setAbout] = useState(false);
+  const titleId = useId();
+  const aboutId = useId();
   const asOfDay = isCalendarDate(asOf.slice(0, 10)) ? asOf.slice(0, 10) : "";
   const activeCount = [
     filters.commenced,
@@ -225,9 +231,55 @@ function DateMenu({
         {active && <span className="menu-count">{activeCount}</span>}
         <span aria-hidden="true"> ▾</span>
       </summary>
-      <div className="menu-panel" role="group">
-        <fieldset disabled={disabled}>
-          <legend>Came online</legend>
+      <div
+        className="menu-panel dates-panel"
+        role="group"
+        aria-labelledby={titleId}
+      >
+        <div className="dates-head">
+          <span id={titleId} className="dates-title">
+            Filter by dates
+          </span>
+          <button
+            type="button"
+            className="dates-about"
+            aria-expanded={about}
+            aria-controls={aboutId}
+            onClick={() => setAbout((on) => !on)}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5" />
+              <path d="M12 7.5h.01" />
+            </svg>{" "}
+            About dates
+          </button>
+        </div>
+        <div id={aboutId} className="dates-note" hidden={!about}>
+          <p>
+            Came online uses the published commencement date, never first-seen
+            telemetry.
+          </p>
+          <p>
+            Month- and year-only dates count from the first day of their period.
+          </p>
+        </div>
+        <fieldset className="dates-group" disabled={disabled}>
+          <legend>
+            <span>Came online</span>
+            <span className="dates-chip">Operating / commissioning</span>
+          </legend>
           <RangeFields
             range={filters.commenced}
             max={asOfDay}
@@ -235,7 +287,7 @@ function DateMenu({
           />
           <button
             type="button"
-            className="menu-clear"
+            className="menu-clear dates-preset"
             disabled={asOfDay === "" || disabled}
             onClick={() =>
               onChange({
@@ -247,23 +299,30 @@ function DateMenu({
             Last 12 months
           </button>
         </fieldset>
-        <fieldset disabled={disabled}>
-          <legend>Expected online</legend>
+        <fieldset className="dates-group" disabled={disabled}>
+          <legend>
+            <span>Expected online</span>
+            <span className="dates-chip">Committed</span>
+          </legend>
           <RangeFields
             range={filters.expected}
             min={asOfDay}
             onChange={(expected) => onChange({ ...filters, expected })}
           />
         </fieldset>
-        <fieldset disabled={disabled}>
-          <legend>Closed</legend>
+        <fieldset className="dates-group" disabled={disabled}>
+          <legend>
+            <span>Closed</span>
+            <span className="dates-chip">Retired</span>
+          </legend>
           <RangeFields
             range={filters.closed}
             max={asOfDay}
             onChange={(closed) => onChange({ ...filters, closed })}
           />
         </fieldset>
-        <div className="menu-actions">
+        <div className="dates-foot">
+          <p className="muted">Units matching any range are shown</p>
           <button
             type="button"
             className="menu-clear"
@@ -277,15 +336,9 @@ function DateMenu({
               })
             }
           >
-            Clear
+            Clear dates
           </button>
         </div>
-        <p className="muted menu-hint">
-          Each range applies to units with the matching status:
-          operating/commissioning for came online, committed for expected,
-          retired for closed. Month- and year-only dates count from the start of
-          their period.
-        </p>
       </div>
     </details>
   );
