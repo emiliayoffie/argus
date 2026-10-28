@@ -64,8 +64,8 @@ main > * {
   border-radius: 4px;
 }
 
-/* Colour-blind mode swatches: chunky solid circles filled with the accent
-   that palette would use in the current theme, so each previews itself */
+/* Colour-blind mode swatches: small Ishihara-style plates, a mottled field of
+   dots in four shades of each palette's hue (drawn by PaletteDot) */
 .palette-switch {
   display: flex;
   align-items: center;
@@ -81,38 +81,68 @@ main > * {
 }
 
 .swatch {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: var(--swatch);
+  background: none;
   cursor: pointer;
   transition: transform 120ms ease-out;
 }
 
+.plate {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  /* Faint rim, like the edge of a printed plate */
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.plate-base {
+  fill: var(--plate-0);
+}
+
+.plate-dot-0 {
+  fill: var(--plate-1);
+}
+
+.plate-dot-1 {
+  fill: var(--plate-2);
+}
+
+.plate-dot-2 {
+  fill: var(--plate-3);
+}
+
+.plate-dot-3 {
+  fill: var(--plate-4);
+}
+
+/* Shades: base, then four dot tones from light to deep */
 .swatch[data-palette="deutan"] {
-  --swatch: #d55e00;
+  --plate-0: #f2955d;
+  --plate-1: #ffb57c;
+  --plate-2: #ff9a52;
+  --plate-3: #ec7442;
+  --plate-4: #d85a35;
 }
 
 .swatch[data-palette="tritan"] {
-  --swatch: #c62828;
+  --plate-0: #f06ea3;
+  --plate-1: #ffa3cb;
+  --plate-2: #ff7fb8;
+  --plate-3: #d9548b;
+  --plate-4: #b6436f;
 }
 
 .swatch[data-palette="mono"] {
-  --swatch: #777777;
-}
-
-:root[data-theme="dark"] .swatch[data-palette="deutan"] {
-  --swatch: #ff8f45;
-}
-
-:root[data-theme="dark"] .swatch[data-palette="tritan"] {
-  --swatch: #ff7eb6;
-}
-
-:root[data-theme="dark"] .swatch[data-palette="mono"] {
-  --swatch: #b8b2a8;
+  --plate-0: #bfb9b1;
+  --plate-1: #e2ddd6;
+  --plate-2: #cfc9c1;
+  --plate-3: #a39d95;
+  --plate-4: #86807a;
 }
 
 /* The pressed ring is a second cue beyond the fill change */
@@ -1711,8 +1741,8 @@ td .note {
   }
 
   .swatch {
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
   }
 
   /* 16px inputs keep iOS from auto-zooming on focus */
