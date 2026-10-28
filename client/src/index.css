@@ -220,7 +220,9 @@
   --tech-bioenergy: #009e73;
   --tech-coal: #333333;
   --tech-gas: #d55e00;
-  --tech-distillate: #8d8079;
+  /* Okabe–Ito yellow: the grey it replaced collapsed into the bluish green
+     under simulated deuteranopia (ΔE 3); the yellow keeps every pair ≥ 17 */
+  --tech-distillate: #f0e442;
   --tech-other: #cfc9c2;
 }
 
