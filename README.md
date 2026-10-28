@@ -43,8 +43,8 @@ Everything on the page describes one selection, and the URL always matches the s
   - Committed wind, solar and battery by state → `?tech=solar,wind,battery&status=committed&by=state&split=techGroup`
   - The fossil fleet, retired and remaining → `?tech=coal,gas,distillate&by=status&measure=mw&split=techGroup`
 - **The headline and four cards** sum the selection: facilities, units, registered capacity (with a stacked bar by status) and battery storage. Each card's ⓘ explains how the number is calculated and what was left out.
-- **Capacity breakdown** groups the selection by state, technology or status, in MW or facilities, optionally split by a second dimension. Clicking a bar narrows the cards, map and table without hiding the other bars.
-- **Facilities** shows the same selection on a map and in a sortable, paginated table. Click rows or markers to highlight facilities for comparison; totals never change. **Export CSV** writes every listed facility (all pages, after filters and drilldown) with dates and their precision.
+- **Capacity breakdown** groups the selection by state, technology or status, in MW or facilities, optionally split by a second dimension. Grouped by state, a small shaded map of Australia sits beside the bars, and hovering a state highlights its bar and vice versa. Clicking a bar or a state narrows the cards, map and table without hiding the other bars.
+- **Map** plots one marker per facility in the selection; it collapses without losing its position. **Facilities** lists the same selection in a sortable, paginated table. Click rows or markers to highlight facilities for comparison; totals never change. **Export CSV** writes every listed facility (all pages, after filters and drilldown) with dates and their precision.
 - The eye next to the wordmark switches light and dark mode; the dots at the top right switch to deuteranopia, tritanopia or greyscale palettes, which recolour the markers, legends and map tiles.
 
 ## How it's built

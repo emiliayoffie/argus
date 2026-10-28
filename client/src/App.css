@@ -1194,8 +1194,36 @@ footer a {
   gap: 0.5rem;
 }
 
-.results-header > button:last-child {
-  margin-left: auto;
+/* Collapse / Expand in the Map heading: a text button with a chevron that
+   points down while the map is collapsed */
+.map-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  border-color: transparent;
+  background: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.map-toggle:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--ivory);
+}
+
+.map-toggle .chevron {
+  transition: transform 150ms ease-out;
+}
+
+.map-toggle[aria-expanded="false"] .chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-toggle .chevron {
+    transition: none;
+  }
 }
 
 /* Floating back-to-top: charcoal disc with a cream arrow. Hidden via

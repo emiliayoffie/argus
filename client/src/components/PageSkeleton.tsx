@@ -125,13 +125,11 @@ export function PageSkeleton() {
 
       <section className="results">
         <SectionHeadingBones />
-        <div className="results-header">
-          <span
-            className="bone"
-            style={{ width: "7rem", height: "2rem", marginLeft: "auto" }}
-          />
-        </div>
         <div className="bone map-canvas" />
+      </section>
+
+      <section className="results">
+        <SectionHeadingBones />
         <div className="table-wrap">
           <table>
             <thead>

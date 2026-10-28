@@ -2,6 +2,7 @@ import {
   latLngBounds,
   type CircleMarker as LeafletCircleMarker,
   type LatLngTuple,
+  type Map as LeafletMap,
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -41,17 +42,29 @@ const DEFAULT_BOUNDS: LatLngTuple[] = [
 const statusColor = (colors: PaletteColors, f: FacilityRow) =>
   f.statuses.length === 1 ? colors.status[f.statuses[0]] : colors.mixed;
 
+const fitTo = (map: LeafletMap, located: Located[]) =>
+  map.fitBounds(
+    located.length
+      ? latLngBounds(located.map((f) => [f.lat, f.lng]))
+      : latLngBounds(DEFAULT_BOUNDS),
+    { padding: [24, 24], maxZoom: 9 },
+  );
+
 // Marker area tracks matching MW; unknown MW gets the minimum size
 const radius = (f: FacilityRow) =>
   f.matchingMw === null ? 4 : Math.min(18, 4 + Math.sqrt(f.matchingMw) / 3);
 
 // Viewport rules: a saved view (from the URL) wins on mount; otherwise, and
 // whenever the selection or resetRequest changes, fit to the selection. The
-// user's own pans and zooms are reported upward so they can go in the URL
+// user's own pans and zooms are reported upward so they can go in the URL.
+// While the map is collapsed (display: none) Leaflet has no size, so a fit
+// is deferred until it is shown again; showing it also re-measures the
+// container, and nothing else moves the view
 function Viewport({
   facilities,
   initialView,
   resetRequest,
+  visible,
   onViewChange,
   initialPopup,
   markers,
@@ -59,12 +72,15 @@ function Viewport({
   facilities: Located[];
   initialView: MapView;
   resetRequest: number;
+  visible: boolean;
   onViewChange: (view: NonNullable<MapView>) => void;
   initialPopup: string | null;
   markers: RefObject<Map<string, LeafletCircleMarker>>;
 }) {
   const map = useMap();
   const restored = useRef(false);
+  const shown = useRef(visible);
+  const pendingFit = useRef(false);
 
   // Reopen the most recently selected facility's popup on mount (after a
   // reload). This component renders after the markers, so they exist by now
@@ -79,11 +95,25 @@ function Viewport({
       return;
     }
     restored.current = true;
-    const bounds = facilities.length
-      ? latLngBounds(facilities.map((f) => [f.lat, f.lng]))
-      : latLngBounds(DEFAULT_BOUNDS);
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 9 });
+    if (!shown.current) {
+      pendingFit.current = true;
+      return;
+    }
+    fitTo(map, facilities);
   }, [map, facilities, initialView, resetRequest]);
+
+  // Runs after the fit effect above in the same commit. Re-measures the
+  // container whenever the map is visible, and performs any fit that was
+  // deferred while it was hidden
+  useEffect(() => {
+    shown.current = visible;
+    if (!visible) return;
+    map.invalidateSize();
+    if (pendingFit.current) {
+      pendingFit.current = false;
+      fitTo(map, facilities);
+    }
+  }, [map, visible, facilities]);
 
   // Trackpad pinch (and Cmd/Ctrl + scroll) zooms the map around the pointer
   // and never the page; a plain two-finger scroll still scrolls the page
@@ -117,6 +147,8 @@ type Props = {
   view: MapView;
   // Bumped by Reset: refit even though the selection may be unchanged
   resetRequest: number;
+  // False while the section is collapsed; the map stays mounted but hidden
+  visible: boolean;
   onViewChange: (view: NonNullable<MapView>) => void;
   selected: string[];
   // Marker clicked: toggle the facility in the highlight set
@@ -132,6 +164,7 @@ export default function FacilityMap({
   facilities,
   view,
   resetRequest,
+  visible,
   onViewChange,
   selected,
   onToggle,
@@ -251,6 +284,7 @@ export default function FacilityMap({
           facilities={located}
           initialView={initialView}
           resetRequest={resetRequest}
+          visible={visible}
           onViewChange={onViewChange}
           initialPopup={initialPopup}
           markers={markers}

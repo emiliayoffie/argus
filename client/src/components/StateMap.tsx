@@ -29,7 +29,7 @@ export function StateMap({
   onHover,
   onSelect,
 }: Props) {
-  const shapes = useMemo(stateShapes, []);
+  const shapes = useMemo(() => stateShapes(), []);
   const byKey = new Map(groups.map((g) => [g.key, g]));
   const value = (g: BreakdownGroup) => (measure === "mw" ? g.mw : g.facilities);
   const max = Math.max(1, ...groups.map(value));

@@ -109,6 +109,7 @@ export default function App() {
   const eyeClipId = useId();
   const paletteLabelId = useId();
   const exportHintId = useId();
+  const mapRegionId = useId();
   // The view is read from the URL once, on mount, and written back from the
   // event handlers below; there's no effect watching either side
   const [state, setState] = useState<AppState>(() =>
@@ -450,9 +451,115 @@ export default function App() {
             }
           />
 
-          <section className="results" aria-labelledby="results-heading">
+          <section className="results" aria-labelledby="map-heading">
             <SectionHeading
               number="02"
+              id="map-heading"
+              title="Map"
+              actions={
+                <button
+                  type="button"
+                  className="map-toggle"
+                  aria-expanded={showMap}
+                  aria-controls={mapRegionId}
+                  disabled={facilities.length === 0}
+                  onClick={() => setShowMap((on) => !on)}
+                >
+                  {showMap ? "Collapse" : "Expand"}
+                  <svg
+                    className="chevron"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="m6 15 6-6 6 6" />
+                  </svg>
+                </button>
+              }
+            >
+              Every facility in the current view, sized by matching MW and
+              coloured by status. Click a marker to highlight it here and in the
+              table.
+            </SectionHeading>
+            {(drilldown || state.selected.length > 0) && (
+              <div className="results-header">
+                {drilldown && (
+                  <button
+                    type="button"
+                    className="chip"
+                    onClick={() => changeDrilldown(null)}
+                    aria-label={`Clear selection ${label(drilldown.dim, drilldown.key)}`}
+                  >
+                    Showing: {label(drilldown.dim, drilldown.key)}{" "}
+                    <span aria-hidden="true">×</span>
+                  </button>
+                )}
+                {state.selected.length > 0 && (
+                  <button
+                    type="button"
+                    className="chip chip-selected"
+                    onClick={() => patch({ selected: [] })}
+                    aria-label={`Clear ${state.selected.length} highlighted facilities`}
+                    title="Highlighted facilities are marked on the map and in the table; totals are unaffected"
+                  >
+                    {formatCount(state.selected.length)} highlighted
+                    {selectedShown.length > 0 && ` · ${formatMw(selectedMw)}`}
+                    {selectedShown.length < state.selected.length &&
+                      ` (${formatCount(selectedShown.length)} in view)`}{" "}
+                    <span aria-hidden="true">×</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* The map stays mounted while collapsed so its viewport, markers
+                and open popup survive; it is only hidden */}
+            {facilities.length > 0 ? (
+              <div id={mapRegionId} hidden={!showMap}>
+                <Suspense
+                  fallback={
+                    <>
+                      <p className="visually-hidden" role="status">
+                        Loading map…
+                      </p>
+                      <div className="bone map-canvas" aria-hidden="true" />
+                    </>
+                  }
+                >
+                  <FacilityMap
+                    facilities={facilities}
+                    view={state.view}
+                    resetRequest={resetRequest}
+                    visible={showMap}
+                    onViewChange={(view) => patch({ view })}
+                    selected={state.selected}
+                    onToggle={toggle}
+                    onLocate={(code) => {
+                      if (!state.selected.includes(code)) toggle(code);
+                      const index = facilities.findIndex(
+                        (f) => f.code === code,
+                      );
+                      if (index >= 0) setPage(Math.floor(index / PAGE_SIZE));
+                      setLocate((l) => ({ code, request: l.request + 1 }));
+                    }}
+                  />
+                </Suspense>
+              </div>
+            ) : (
+              <p className="muted">No facilities to map.</p>
+            )}
+          </section>
+
+          <section className="results" aria-labelledby="results-heading">
+            <SectionHeading
+              number="03"
               id="results-heading"
               title="Facilities"
               actions={
@@ -494,72 +601,9 @@ export default function App() {
                 </>
               }
             >
-              Every facility in the current view, on the map and in the table.
-              Highlight rows or markers to compare them; export the list as CSV.
+              The same facilities as a sortable table. Highlight rows to compare
+              them with the map; export the full list as CSV.
             </SectionHeading>
-            <div className="results-header">
-              {drilldown && (
-                <button
-                  type="button"
-                  className="chip"
-                  onClick={() => changeDrilldown(null)}
-                  aria-label={`Clear selection ${label(drilldown.dim, drilldown.key)}`}
-                >
-                  Showing: {label(drilldown.dim, drilldown.key)}{" "}
-                  <span aria-hidden="true">×</span>
-                </button>
-              )}
-              {state.selected.length > 0 && (
-                <button
-                  type="button"
-                  className="chip chip-selected"
-                  onClick={() => patch({ selected: [] })}
-                  aria-label={`Clear ${state.selected.length} highlighted facilities`}
-                  title="Highlighted facilities are marked on the map and in the table; totals are unaffected"
-                >
-                  {formatCount(state.selected.length)} highlighted
-                  {selectedShown.length > 0 && ` · ${formatMw(selectedMw)}`}
-                  {selectedShown.length < state.selected.length &&
-                    ` (${formatCount(selectedShown.length)} in view)`}{" "}
-                  <span aria-hidden="true">×</span>
-                </button>
-              )}
-              <button
-                type="button"
-                aria-pressed={showMap}
-                onClick={() => setShowMap((on) => !on)}
-              >
-                {showMap ? "Hide map" : "Show map"}
-              </button>
-            </div>
-
-            {showMap && facilities.length > 0 && (
-              <Suspense
-                fallback={
-                  <>
-                    <p className="visually-hidden" role="status">
-                      Loading map…
-                    </p>
-                    <div className="bone map-canvas" aria-hidden="true" />
-                  </>
-                }
-              >
-                <FacilityMap
-                  facilities={facilities}
-                  view={state.view}
-                  resetRequest={resetRequest}
-                  onViewChange={(view) => patch({ view })}
-                  selected={state.selected}
-                  onToggle={toggle}
-                  onLocate={(code) => {
-                    if (!state.selected.includes(code)) toggle(code);
-                    const index = facilities.findIndex((f) => f.code === code);
-                    if (index >= 0) setPage(Math.floor(index / PAGE_SIZE));
-                    setLocate((l) => ({ code, request: l.request + 1 }));
-                  }}
-                />
-              </Suspense>
-            )}
 
             {facilities.length === 0 ? (
               <div className="status">
