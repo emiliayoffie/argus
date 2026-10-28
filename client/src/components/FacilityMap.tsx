@@ -73,7 +73,7 @@ function Viewport({
   initialView: MapView;
   resetRequest: number;
   visible: boolean;
-  onViewChange: (view: NonNullable<MapView>) => void;
+  onViewChange: (view: MapView) => void;
   initialPopup: string | null;
   markers: RefObject<Map<string, LeafletCircleMarker>>;
 }) {
@@ -81,6 +81,25 @@ function Viewport({
   const restored = useRef(false);
   const shown = useRef(visible);
   const pendingFit = useRef(false);
+  // What caused the next moveend: only the user's own pans and zooms are
+  // saved; a fit to the selection means "fit" (view = null); restoring a
+  // saved view or re-measuring leaves the saved view alone
+  const source = useRef<"user" | "fit" | "quiet">("quiet");
+
+  // Pointer, wheel and key input on the map are the user's own moves (drag,
+  // pinch, scroll zoom, the +/- control, keyboard panning, popup autopan)
+  useEffect(() => {
+    const container = map.getContainer();
+    const markUser = () => {
+      source.current = "user";
+    };
+    const events = ["pointerdown", "wheel", "keydown"] as const;
+    for (const name of events)
+      container.addEventListener(name, markUser, { passive: true });
+    return () => {
+      for (const name of events) container.removeEventListener(name, markUser);
+    };
+  }, [map]);
 
   // Reopen the most recently selected facility's popup on mount (after a
   // reload). This component renders after the markers, so they exist by now
@@ -91,6 +110,7 @@ function Viewport({
   useEffect(() => {
     if (!restored.current && initialView) {
       restored.current = true;
+      source.current = "quiet";
       map.setView([initialView.lat, initialView.lng], initialView.zoom);
       return;
     }
@@ -99,6 +119,7 @@ function Viewport({
       pendingFit.current = true;
       return;
     }
+    source.current = "fit";
     fitTo(map, facilities);
   }, [map, facilities, initialView, resetRequest]);
 
@@ -108,9 +129,16 @@ function Viewport({
   useEffect(() => {
     shown.current = visible;
     if (!visible) return;
+    // invalidateSize fires its moveend synchronously and this effect runs
+    // after the fit effect, so restore the source or the fit's later
+    // (animated) moveend would be swallowed
+    const prev = source.current;
+    source.current = "quiet";
     map.invalidateSize();
+    source.current = prev;
     if (pendingFit.current) {
       pendingFit.current = false;
+      source.current = "fit";
       fitTo(map, facilities);
     }
   }, [map, visible, facilities]);
@@ -134,6 +162,11 @@ function Viewport({
 
   useMapEvents({
     moveend: () => {
+      if (source.current === "quiet") return;
+      if (source.current === "fit") {
+        onViewChange(null);
+        return;
+      }
       const { lat, lng } = map.getCenter();
       onViewChange({ lat, lng, zoom: map.getZoom() });
     },
@@ -149,7 +182,7 @@ type Props = {
   resetRequest: number;
   // False while the section is collapsed; the map stays mounted but hidden
   visible: boolean;
-  onViewChange: (view: NonNullable<MapView>) => void;
+  onViewChange: (view: MapView) => void;
   selected: string[];
   // Marker clicked: toggle the facility in the highlight set
   onToggle: (code: string) => void;
