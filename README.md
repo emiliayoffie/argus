@@ -55,10 +55,9 @@ Everything on the page describes one selection, and the URL always matches the s
   - Batteries recently online in NSW and QLD → `?state=NSW,QLD&tech=battery&status=commissioning,operating&by=status&sort=keyDate:desc&recent=12`
   - Committed wind, solar and battery by state → `?tech=solar,wind,battery&status=committed&by=state&split=techGroup`
   - The fossil fleet, retired and remaining → `?tech=coal,gas,distillate&by=status&measure=mw&split=techGroup`
-- **The headline and four cards** sum the selection: facilities, units, registered capacity (with a stacked bar by status) and battery storage. Each card's ⓘ explains how the number is calculated and what was left out.
-- **Capacity breakdown** groups the selection by state, technology or status, in MW or facilities, optionally split by a second dimension. Grouped by state, a small shaded map of Australia sits beside the bars, and hovering a state highlights its bar and vice versa. Clicking a bar or a state narrows the cards, map and table without hiding the other bars.
-- **Map** plots one marker per facility in the selection; it collapses without losing its position. **Facilities** lists the same selection in a sortable, paginated table. Click rows or markers to highlight facilities for comparison; totals never change. **Export CSV** writes every listed facility (all pages, after filters and drilldown) with dates and their precision.
-- The eye next to the wordmark switches light and dark mode; the dots at the top right switch to deuteranopia, tritanopia or greyscale palettes, which recolour the charts, state map, markers, legends and map tiles. Text, badges and input outlines meet WCAG AA contrast in both themes and every palette.
+- **The headline and four cards** sum the selection: facilities, units, registered capacity and battery storage. Each card's ⓘ explains the calculation and what was left out.
+- **Capacity breakdown** groups the selection by state, technology or status, in MW or facilities, optionally split by a second dimension. Clicking a bar or a state narrows the cards, map and table without hiding the other bars.
+- **Map** and **Facilities** show the same selection, one marker or row per facility. Click rows or markers to highlight them for comparison; totals never change. **Export CSV** writes every matching facility with its dates and their precision.
 
 ## How it's built
 
@@ -66,6 +65,20 @@ Everything on the page describes one selection, and the URL always matches the s
 - `client/` is React and TypeScript using Vite. The dataset is small (633 facilities, about 540 KB after trimming), so the client fetches it once and does all filtering and aggregation in the browser.
 - `client/src/domain/` contains plain functions with no React, tested against a trimmed real API response. Normalising, filtering, aggregating, dates and URL parsing all live here.
 - `App.tsx` holds the view state, keeps it in sync with the URL, and derives everything else.
+
+## Layout
+
+```
+client/src/
+  App.tsx          view state, URL sync, page composition
+  components/      filter bar, summary cards, breakdown, map, table
+  domain/          pure logic: normalise, filter, aggregate, dates, URL, export
+  api/             data-fetching hook with loading, error and retry states
+  theme.ts         light/dark mode and colour palettes
+server/src/
+  index.ts         the Worker: GET /api/facilities
+  contract.ts      response schemas and error codes
+```
 
 ## API
 
@@ -88,29 +101,7 @@ This is the only endpoint. The client fetches the full dataset once and does all
 - Map markers can overlap at low zoom, and browser back/forward navigation doesn't step through previous views.
 - Browser testing is currently manual, with automated tests covering domain logic and API behavior.
 - Argus uses a current snapshot of facility data, so it can't show how projects have changed over time.
-- This is a prototype for local use. See Data use and deployment below before exposing it publicly.
-
-## Data use and deployment
-
-The data comes from the [OpenElectricity](https://openelectricity.org.au) API and is shown with a link to it in the page footer. Unless stated otherwise, OpenElectricity data is licensed [CC BY-NC 4.0](https://platform.openelectricity.org.au/license): you must credit OpenElectricity and say if you changed the data (Argus normalises, filters and aggregates it). Community and Academic plans are for non-commercial use only; commercial use needs an Enterprise licence from OpenElectricity.
-
-Before this is put in front of the public:
-
-- **Licence:** confirm the plan and terms cover the intended use.
-- **Edge cache:** cache `/api/facilities` for 15 minutes, matching the upstream `max-age=900`. Today every page load makes one upstream request.
-- **Rate limiting:** add a Cloudflare rate-limit rule on `/api/facilities`, so visitors cannot exhaust the API quota.
-- **Token:** store it with `wrangler secret put OPEN_ELECTRICITY_API_TOKEN`, never in `wrangler.toml`.
-
-## Verification
-
-Run on 2026-10-28 with Node 22.23.3 and Yarn 3.4.1:
-
-- `yarn check` passed: ESLint, Prettier, typecheck, 193 tests in 13 files (domain logic, URL state, API route and error mapping, client fetch states), and the production client build.
-- Checked in headless Chrome against the running app:
-  - The default view `/` keeps a clean URL and a disabled Reset button after the map fits itself. Dragging the map writes `view=`; pressing Reset returns to `/` with Reset disabled again. A shared `view=` link restores its position.
-  - There is no horizontal scrolling at 320, 360, 390 or 1280 px, nor at 390 px with the WCAG text-spacing overrides applied. No visible text is under 12 px.
-  - Text, badge and input-outline contrast meets WCAG AA in light and dark with all three palettes (measured, not estimated).
-- Not covered: automated browser tests, Safari and Firefox, and screen-reader testing.
+- The data is OpenElectricity's, licensed [CC BY-NC 4.0](https://platform.openelectricity.org.au/license): credit them and keep use non-commercial. A public deployment would also need a 15-minute edge cache and rate limiting on `/api/facilities`.
 
 ## Next steps
 
