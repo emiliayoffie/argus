@@ -330,28 +330,44 @@ describe("expected and closed ranges", () => {
     ).toEqual([]);
   });
 
-  it("all three ranges AND on the same unit", () => {
-    const matching = row({
+  const mixed = [
+    row({
+      unitCode: "op",
+      state: "NSW",
       status: "operating",
-      commencement: { iso: "2020-01-01T", precision: "day" },
-      expectedOperation: { iso: "2019-01-01T", precision: "day" },
-    });
-    // expected requires committed, so it always fails on operating rows —
-    // ranges compose per-unit, and no unit can satisfy both at once
+      commencement: { iso: "2024-06-01T", precision: "day" },
+    }),
+    row({
+      unitCode: "ret",
+      state: "QLD",
+      status: "retired",
+      closure: { iso: "2020-05-01T", precision: "day" },
+    }),
+    row({
+      unitCode: "com",
+      state: "NSW",
+      status: "committed",
+      expectedOperation: { iso: "2030-01-01T", precision: "day" },
+    }),
+  ];
+  const ranges = {
+    commenced: { from: "2024-01-01", to: null },
+    closed: { from: "2015-01-01", to: "2024-12-31" },
+    expected: { from: "2026-01-01", to: "2027-12-31" },
+  };
+
+  it("ORs the date ranges: a unit in any filled range matches", () => {
+    expect(applyFilters(mixed, f(ranges)).map((r) => r.unitCode)).toEqual([
+      "op",
+      "ret",
+    ]);
+  });
+
+  it("still ANDs the date ranges with the other facets", () => {
     expect(
-      applyFilters(
-        [matching],
-        f({
-          commenced: { from: "2019-01-01", to: "2021-01-01" },
-          expected: { from: "2018-01-01", to: "2020-01-01" },
-        }),
+      applyFilters(mixed, f({ ...ranges, states: ["NSW"] })).map(
+        (r) => r.unitCode,
       ),
-    ).toEqual([]);
-    expect(
-      applyFilters(
-        [matching],
-        f({ commenced: { from: "2019-01-01", to: "2021-01-01" } }),
-      ).length,
-    ).toBe(1);
+    ).toEqual(["op"]);
   });
 });

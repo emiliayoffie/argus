@@ -52,16 +52,19 @@ export function headline(
     formatSourceDate({ iso, precision: "day" }) ?? iso;
   const rangeText = (range: DateRange, verb: string) =>
     range.from !== null && range.to !== null
-      ? `, ${verb} ${day(range.from)} – ${day(range.to)}`
+      ? `${verb} ${day(range.from)} – ${day(range.to)}`
       : range.from !== null
-        ? `, ${verb} from ${day(range.from)}`
+        ? `${verb} from ${day(range.from)}`
         : range.to !== null
-          ? `, ${verb} until ${day(range.to)}`
+          ? `${verb} until ${day(range.to)}`
           : "";
-  const dates =
-    rangeText(filters.commenced, "came online") +
-    rangeText(filters.expected, "expected online") +
-    rangeText(filters.closed, "closed");
+  // The ranges OR together (a unit has one status), so the sentence says "or"
+  const dateParts = [
+    rangeText(filters.commenced, "came online"),
+    rangeText(filters.expected, "expected online"),
+    rangeText(filters.closed, "closed"),
+  ].filter((part) => part !== "");
+  const dates = dateParts.length ? `, ${list(dateParts, "or")}` : "";
   const narrowed = drilldownLabel ? ` (showing ${drilldownLabel})` : "";
 
   // Figures that would be unknown are left out rather than shown as 0

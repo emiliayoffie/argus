@@ -37,7 +37,7 @@ yarn dev                                        # http://localhost:5173
 
 Everything on the page describes one selection, and the URL always matches the screen, so any view can be shared by copying the address.
 
-- **Filters** sit in the toolbar: state/region, technology, status, a search box, and a Dates menu with three ranges (came online, expected online, closed). Each range is tied to the status it belongs to, and every filter must match the same unit.
+- **Filters** sit in the toolbar: state/region, technology, status, a search box, and a Dates menu with three ranges (came online, expected online, closed). Each range is tied to the status it belongs to, so filling in several shows units in any of them; every other filter must match the same unit.
 - **Examples** in the toolbar opens the three customer questions as starting points. They're ordinary filter states:
   - Batteries recently online in NSW and QLD → `?state=NSW,QLD&tech=battery&status=commissioning,operating&by=status&sort=keyDate:desc&recent=12`
   - Committed wind, solar and battery by state → `?tech=solar,wind,battery&status=committed&by=state&split=techGroup`

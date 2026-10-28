@@ -68,10 +68,26 @@ export function closedWithin(row: UnitRow, range: DateRange): boolean {
   return row.status === "retired" && inRange(dateSortKey(row.closure), range);
 }
 
+/** Date ranges are ORed: each is tied to a different lifecycle status and a unit has exactly one, so requiring several at once could never match. No active range is no constraint; the result is still ANDed with every other facet on the same unit */
+export function inAnyDateRange(
+  row: UnitRow,
+  filters: Pick<Filters, "commenced" | "expected" | "closed">,
+): boolean {
+  const checks = [
+    [filters.commenced, commencedWithin],
+    [filters.expected, expectedWithin],
+    [filters.closed, closedWithin],
+  ] as const;
+  const active = checks.filter(([range]) => !isEmptyRange(range));
+  return (
+    active.length === 0 || active.some(([range, within]) => within(row, range))
+  );
+}
+
 // Unit-aware filtering: every facet must match the same unit, so a hybrid
 // facility's solar unit can't satisfy a battery filter on its behalf.
-// Empty facet = all; OR within a facet; AND across facets. An empty commenced
-// range is no constraint at all, so its status rule doesn't apply either
+// Empty facet = all; OR within a facet; AND across facets. The date ranges
+// OR among themselves (see inAnyDateRange) and count as one facet here
 export function applyFilters(rows: UnitRow[], filters: Filters): UnitRow[] {
   const search = filters.search.trim().toLowerCase();
   return rows.filter(
@@ -84,11 +100,7 @@ export function applyFilters(rows: UnitRow[], filters: Filters): UnitRow[] {
       (search === "" ||
         row.facilityName.toLowerCase().includes(search) ||
         row.facilityCode.toLowerCase().includes(search)) &&
-      (isEmptyRange(filters.commenced) ||
-        commencedWithin(row, filters.commenced)) &&
-      (isEmptyRange(filters.expected) ||
-        expectedWithin(row, filters.expected)) &&
-      (isEmptyRange(filters.closed) || closedWithin(row, filters.closed)),
+      inAnyDateRange(row, filters),
   );
 }
 

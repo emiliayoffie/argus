@@ -148,3 +148,19 @@ describe("expected and closed fragments", () => {
     ).toContain("closed until 1 Jan 2020");
   });
 });
+
+describe("date ranges join with or", () => {
+  it("writes came online and closed as alternatives", () => {
+    const state: AppState = {
+      ...DEFAULT_STATE,
+      filters: {
+        ...DEFAULT_STATE.filters,
+        commenced: { from: "2024-01-01", to: null },
+        closed: { from: "2015-01-01", to: "2024-12-31" },
+      },
+    };
+    expect(sentence(state)).toContain(
+      "came online from 1 Jan 2024 or closed 1 Jan 2015 – 31 Dec 2024",
+    );
+  });
+});
