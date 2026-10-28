@@ -1005,8 +1005,105 @@ footer a {
   background: transparent;
 }
 
-.bar:hover {
+.bar:hover,
+.bar.hover {
   background: var(--ivory);
+}
+
+/* Grouped by state: a compact choropleth sits beside the bars and the two
+   highlight together. The map column is fixed so the bars keep their width */
+.breakdown-geo {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 0.5rem 1.5rem;
+  align-items: start;
+}
+
+.state-map {
+  margin: 0;
+  padding-top: 0.3rem;
+}
+
+.state-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.state-map path {
+  fill: var(--bone);
+  stroke: var(--paper);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition:
+    fill 150ms ease-out,
+    stroke 150ms ease-out;
+}
+
+.state-map path.hover {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.state-map path.selected {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.state-map path:focus-visible {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+/* Legend: the ramp from the lightest tint to the full colour, then the
+   neutral used for states with nothing matching */
+.state-map-legend {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.state-map-scale {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--viz) 18%, var(--paper)),
+    var(--viz)
+  );
+}
+
+.state-map-scale-labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.state-map-key {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.3;
+}
+
+.state-map-none {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--bone);
+  border: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-map path {
+    transition: none;
+  }
 }
 
 .bar-track {
@@ -1655,6 +1752,15 @@ td .note {
 
   .bar {
     grid-template-columns: 6rem 1fr 4.5rem;
+  }
+
+  /* Map above the bars, narrower than full width so it stays an inset */
+  .breakdown-geo {
+    grid-template-columns: 1fr;
+  }
+
+  .state-map {
+    width: min(14rem, 100%);
   }
 
   .map-canvas {

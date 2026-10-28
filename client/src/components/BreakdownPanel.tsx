@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { DIM_ORDER } from "../domain/aggregate";
 import { formatCount, formatMw } from "../domain/format";
 import {
@@ -10,6 +10,7 @@ import {
   type Dimension,
   type Measure,
 } from "../domain/types";
+import { StateMap } from "./StateMap";
 
 const MEASURE_LABELS: Record<Measure, string> = {
   mw: "MW",
@@ -122,6 +123,9 @@ export function BreakdownPanel({
     splitBy === null
       ? new Map<string, string>()
       : segmentColors(splitBy, groups);
+  // Hovered or focused group, shared by the bars and the state map
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const withMap = groupBy === "state" && groups.length > 0;
   // Share of the total only makes sense for MW: facility counts double-count
   // hybrids, so a percentage would lie
   const totalMw = groups.reduce((n, g) => n + g.mw, 0);
@@ -165,60 +169,84 @@ export function BreakdownPanel({
       {groups.length === 0 ? (
         <p className="muted">Nothing to break down.</p>
       ) : (
-        <ol className="bars">
-          {groups.map((g) => {
-            const selected = g.key === selectedKey;
-            const unknownNote =
-              g.unknownMwUnits > 0
-                ? `, ${formatCount(g.unknownMwUnits)} units without published MW`
-                : "";
-            return (
-              <li key={g.key}>
-                <button
-                  type="button"
-                  className={selected ? "bar selected" : "bar"}
-                  aria-pressed={selected}
-                  onClick={() => onSelect(g.key)}
-                  title={`${g.label}: ${formatMw(g.mw)}${share(g) ? ` (${share(g)} of total)` : ""}, ${formatCount(g.facilities)} facilities, ${formatCount(g.units)} units${unknownNote}`}
-                >
-                  <span className="bar-label">{g.label}</span>
-                  <span className="bar-track">
-                    {g.segments.length > 0 && splitBy !== null ? (
-                      g.segments.map((s) => (
+        // Grouped by state, the bars share the row with a choropleth of the
+        // same groups; the two highlight together
+        <div className={withMap ? "breakdown-geo" : undefined}>
+          {withMap && (
+            <StateMap
+              groups={groups}
+              measure={measure}
+              selectedKey={selectedKey}
+              hoverKey={hoverKey}
+              onHover={setHoverKey}
+              onSelect={onSelect}
+            />
+          )}
+          <ol className="bars">
+            {groups.map((g) => {
+              const selected = g.key === selectedKey;
+              const unknownNote =
+                g.unknownMwUnits > 0
+                  ? `, ${formatCount(g.unknownMwUnits)} units without published MW`
+                  : "";
+              return (
+                <li key={g.key}>
+                  <button
+                    type="button"
+                    className={[
+                      "bar",
+                      selected && "selected",
+                      g.key === hoverKey && "hover",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-pressed={selected}
+                    onClick={() => onSelect(g.key)}
+                    onMouseEnter={() => setHoverKey(g.key)}
+                    onMouseLeave={() => setHoverKey(null)}
+                    onFocus={() => setHoverKey(g.key)}
+                    onBlur={() => setHoverKey(null)}
+                    title={`${g.label}: ${formatMw(g.mw)}${share(g) ? ` (${share(g)} of total)` : ""}, ${formatCount(g.facilities)} facilities, ${formatCount(g.units)} units${unknownNote}`}
+                  >
+                    <span className="bar-label">{g.label}</span>
+                    <span className="bar-track">
+                      {g.segments.length > 0 && splitBy !== null ? (
+                        g.segments.map((s) => (
+                          <span
+                            key={s.key}
+                            className="bar-segment"
+                            title={`${g.label} · ${s.label}: ${formatMw(s.mw)}, ${formatCount(s.facilities)} facilities`}
+                            style={{
+                              width: `${(100 * (measure === "mw" ? s.mw : s.facilities)) / max}%`,
+                              background: shades.get(s.key),
+                            }}
+                          />
+                        ))
+                      ) : (
                         <span
-                          key={s.key}
-                          className="bar-segment"
-                          title={`${g.label} · ${s.label}: ${formatMw(s.mw)}, ${formatCount(s.facilities)} facilities`}
-                          style={{
-                            width: `${(100 * (measure === "mw" ? s.mw : s.facilities)) / max}%`,
-                            background: shades.get(s.key),
-                          }}
+                          className="bar-fill"
+                          style={{ width: `${(100 * value(g)) / max}%` }}
                         />
-                      ))
-                    ) : (
-                      <span
-                        className="bar-fill"
-                        style={{ width: `${(100 * value(g)) / max}%` }}
-                      />
-                    )}
-                  </span>
-                  <span className="bar-value">
-                    {text(g)}
-                    {share(g) && (
-                      <span className="bar-share"> · {share(g)}</span>
-                    )}
-                    {measure === "mw" && g.unknownMwUnits > 0 && (
-                      <span className="bar-note">
-                        {" "}
-                        +{g.unknownMwUnits} unknown
-                      </span>
-                    )}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
+                      )}
+                    </span>
+                    <span className="bar-value">
+                      {text(g)}
+                      {share(g) && (
+                        <span className="bar-share"> · {share(g)}</span>
+                      )}
+                      {measure === "mw" && g.unknownMwUnits > 0 && (
+                        <span className="bar-note">
+                          {" "}
+                          +{g.unknownMwUnits} unknown
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
       {splitBy !== null && groups.some((g) => g.segments.length > 0) && (
         <ul className="split-legend" aria-label="Segments">
