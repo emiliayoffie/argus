@@ -1,5 +1,11 @@
-import { dateSortKey, monthsBefore } from "./format";
-import type { Drilldown, Filters, UnitRow } from "./types";
+import { dateSortKey, isCalendarDate, monthsBefore } from "./format";
+import {
+  EMPTY_RANGE,
+  type DateRange,
+  type Drilldown,
+  type Filters,
+  type UnitRow,
+} from "./types";
 
 export const EMPTY_FILTERS: Filters = {
   states: [],
@@ -7,39 +13,83 @@ export const EMPTY_FILTERS: Filters = {
   statuses: [],
   search: "",
   recentMonths: null,
+  commenced: { ...EMPTY_RANGE },
+  expected: { ...EMPTY_RANGE },
+  closed: { ...EMPTY_RANGE },
 };
 
-// `from`/`to` are inclusive YYYY-MM-DD strings, so a range picker can reuse
-// this later. Only operating and commissioning count as "came online";
-// a missing commencement is out, as is a recent start on a retired unit.
+// Turns the `recent=N` URL shorthand into an explicit commenced range so the
+// rest of the app only ever deals in dates. An explicit `from` wins over the
+// shorthand. With nothing to resolve, the same object comes back so memoized
+// work isn't invalidated
+export function resolveRecent(filters: Filters, asOf: string): Filters {
+  const asOfDay = asOf.slice(0, 10);
+  if (filters.recentMonths === null || !isCalendarDate(asOfDay)) return filters;
+  return {
+    ...filters,
+    recentMonths: null,
+    commenced: {
+      from:
+        filters.commenced.from ?? monthsBefore(asOfDay, filters.recentMonths),
+      to: filters.commenced.to,
+    },
+  };
+}
+
+export const isEmptyRange = (r: DateRange): boolean =>
+  r.from === null && r.to === null;
+
+// Inclusive YYYY-MM-DD window; either side may be open, and `from > to`
+// simply matches nothing. Only operating and commissioning count as "came
+// online"; a missing commencement is out, as is a start on a retired unit.
 // Month/year-precision dates compare at the first day of their period
-export function commencedWithin(
+const inRange = (key: string | null, range: DateRange): boolean =>
+  key !== null &&
+  (range.from === null || key >= range.from) &&
+  (range.to === null || key <= range.to);
+
+export function commencedWithin(row: UnitRow, range: DateRange): boolean {
+  return (
+    (row.status === "operating" || row.status === "commissioning") &&
+    inRange(dateSortKey(row.commencement), range)
+  );
+}
+
+// Committed units expected to start in the window
+export function expectedWithin(row: UnitRow, range: DateRange): boolean {
+  return (
+    row.status === "committed" &&
+    inRange(dateSortKey(row.expectedOperation), range)
+  );
+}
+
+// Retired units that closed in the window
+export function closedWithin(row: UnitRow, range: DateRange): boolean {
+  return row.status === "retired" && inRange(dateSortKey(row.closure), range);
+}
+
+/** Date ranges are ORed: each is tied to a different lifecycle status and a unit has exactly one, so requiring several at once could never match. No active range is no constraint; the result is still ANDed with every other facet on the same unit */
+export function inAnyDateRange(
   row: UnitRow,
-  from: string,
-  to: string,
+  filters: Pick<Filters, "commenced" | "expected" | "closed">,
 ): boolean {
-  if (row.status !== "operating" && row.status !== "commissioning")
-    return false;
-  const key = dateSortKey(row.commencement);
-  return key !== null && from <= key && key <= to;
+  const checks = [
+    [filters.commenced, commencedWithin],
+    [filters.expected, expectedWithin],
+    [filters.closed, closedWithin],
+  ] as const;
+  const active = checks.filter(([range]) => !isEmptyRange(range));
+  return (
+    active.length === 0 || active.some(([range, within]) => within(row, range))
+  );
 }
 
 // Unit-aware filtering: every facet must match the same unit, so a hybrid
 // facility's solar unit can't satisfy a battery filter on its behalf.
-// Empty facet = all; OR within a facet; AND across facets.
-// `asOf` is the dataset's `created_at`: the "recent" window is measured from
-// it, not from today, so a shared link keeps meaning the same thing
-export function applyFilters(
-  rows: UnitRow[],
-  filters: Filters,
-  asOf: string,
-): UnitRow[] {
+// Empty facet = all; OR within a facet; AND across facets. The date ranges
+// OR among themselves (see inAnyDateRange) and count as one facet here
+export function applyFilters(rows: UnitRow[], filters: Filters): UnitRow[] {
   const search = filters.search.trim().toLowerCase();
-  const to = asOf.slice(0, 10);
-  const recentFrom =
-    filters.recentMonths !== null && to.length === 10
-      ? monthsBefore(to, filters.recentMonths)
-      : null;
   return rows.filter(
     (row) =>
       (filters.states.length === 0 || filters.states.includes(row.state)) &&
@@ -50,7 +100,7 @@ export function applyFilters(
       (search === "" ||
         row.facilityName.toLowerCase().includes(search) ||
         row.facilityCode.toLowerCase().includes(search)) &&
-      (recentFrom === null || commencedWithin(row, recentFrom, to)),
+      inAnyDateRange(row, filters),
   );
 }
 

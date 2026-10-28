@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Argus — Australian energy facilities</title>
     <script>
@@ -18,6 +18,19 @@
           ? stored === "dark"
           : matchMedia("(prefers-color-scheme: dark)").matches;
         document.documentElement.dataset.theme = dark ? "dark" : "light";
+        var palette = null;
+        try {
+          palette = localStorage.getItem("palette");
+        } catch {
+          // storage can throw in privacy modes; the default palette still applies
+        }
+        if (
+          palette === "deutan" ||
+          palette === "tritan" ||
+          palette === "mono"
+        ) {
+          document.documentElement.dataset.palette = palette;
+        }
       })();
     </script>
   </head>

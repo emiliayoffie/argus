@@ -157,3 +157,86 @@ describe("against the fixture", () => {
     expect(s.excludedUnits).toBeGreaterThan(0);
   });
 });
+
+describe("groupBy splitBy", () => {
+  const rows = [
+    row({
+      facilityCode: "A",
+      unitCode: "A1",
+      state: "NSW",
+      techGroup: "solar",
+      capacityMw: 10,
+    }),
+    row({
+      facilityCode: "A",
+      unitCode: "A2",
+      state: "NSW",
+      techGroup: "battery",
+      capacityMw: 20,
+    }),
+    row({
+      facilityCode: "B",
+      unitCode: "B1",
+      state: "NSW",
+      techGroup: "wind",
+      capacityMw: 5,
+    }),
+    row({
+      facilityCode: "C",
+      unitCode: "C1",
+      state: "QLD",
+      techGroup: "solar",
+      capacityMw: 8,
+    }),
+  ];
+
+  it("segment MW sums to the group MW", () => {
+    for (const g of groupBy(rows, "state", "mw", "techGroup")) {
+      const segMw = g.segments.reduce((n, s) => n + s.mw, 0);
+      expect(segMw).toBe(g.mw);
+    }
+  });
+
+  it("a hybrid facility appears in both segments' facility counts", () => {
+    const nsw = groupBy(rows, "state", "mw", "techGroup").find(
+      (g) => g.key === "NSW",
+    );
+    const solar = nsw?.segments.find((s) => s.key === "solar");
+    const battery = nsw?.segments.find((s) => s.key === "battery");
+    const wind = nsw?.segments.find((s) => s.key === "wind");
+    expect(solar?.facilities).toBe(1);
+    expect(battery?.facilities).toBe(1);
+    expect(wind?.facilities).toBe(1);
+    expect(nsw?.facilities).toBe(2);
+  });
+
+  it("orders segments in the dimension's canonical order, not by value", () => {
+    const nsw = groupBy(rows, "state", "mw", "techGroup").find(
+      (g) => g.key === "NSW",
+    );
+    // TECH_GROUPS order: solar, wind, hydro, battery — wind before battery
+    expect(nsw?.segments.map((s) => s.key)).toEqual([
+      "solar",
+      "wind",
+      "battery",
+    ]);
+  });
+
+  it("counts unknown MW only from eligible units, not excluded loads", () => {
+    const groups = groupBy(
+      [
+        row({ unitCode: "a", capacityMw: null }), // eligible unknown
+        row({ unitCode: "b", capacityMw: null, mwEligible: false }), // excluded
+        row({ unitCode: "c", capacityMw: 10 }),
+      ],
+      "techGroup",
+      "mw",
+    );
+    expect(groups[0].unknownMwUnits).toBe(1);
+  });
+
+  it("returns empty segments and zero unknowns without a split", () => {
+    const g = groupBy(rows, "state", "mw")[0];
+    expect(g.segments).toEqual([]);
+  });
+});

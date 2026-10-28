@@ -2,9 +2,17 @@ import {
   latLngBounds,
   type CircleMarker as LeafletCircleMarker,
   type LatLngTuple,
+  type Map as LeafletMap,
 } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import {
   CircleMarker,
   MapContainer,
@@ -15,12 +23,8 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import { formatCount, formatMw, formatSourceDate } from "../domain/format";
-import {
-  label,
-  type FacilityRow,
-  type MapView,
-  type Status,
-} from "../domain/types";
+import { label, type FacilityRow, type MapView } from "../domain/types";
+import { usePaletteColors, type PaletteColors } from "../theme";
 
 type Located = FacilityRow & { lat: number; lng: number };
 
@@ -33,19 +37,18 @@ const DEFAULT_BOUNDS: LatLngTuple[] = [
   [-10, 154],
 ];
 
-// Matches the status badge palette; mixed matching statuses are lavender
-const STATUS_COLOR: Record<Status, string> = {
-  operating: "#3f9d8a",
-  commissioning: "#d99a2b",
-  committed: "#5b86c4",
-  retired: "#8d8079",
-  other: "#8d8079",
-};
-const MIXED_COLOR = "#7f6bb0";
-const SELECTED_COLOR = "#d8432b";
+// Marker colours come from CSS variables so theme and palette changes
+// retint existing markers on the next render
+const statusColor = (colors: PaletteColors, f: FacilityRow) =>
+  f.statuses.length === 1 ? colors.status[f.statuses[0]] : colors.mixed;
 
-const color = (f: FacilityRow) =>
-  f.statuses.length === 1 ? STATUS_COLOR[f.statuses[0]] : MIXED_COLOR;
+const fitTo = (map: LeafletMap, located: Located[]) =>
+  map.fitBounds(
+    located.length
+      ? latLngBounds(located.map((f) => [f.lat, f.lng]))
+      : latLngBounds(DEFAULT_BOUNDS),
+    { padding: [24, 24], maxZoom: 9 },
+  );
 
 // Marker area tracks matching MW; unknown MW gets the minimum size
 const radius = (f: FacilityRow) =>
@@ -53,11 +56,15 @@ const radius = (f: FacilityRow) =>
 
 // Viewport rules: a saved view (from the URL) wins on mount; otherwise, and
 // whenever the selection or resetRequest changes, fit to the selection. The
-// user's own pans and zooms are reported upward so they can go in the URL
+// user's own pans and zooms are reported upward so they can go in the URL.
+// While the map is collapsed (display: none) Leaflet has no size, so a fit
+// is deferred until it is shown again; showing it also re-measures the
+// container, and nothing else moves the view
 function Viewport({
   facilities,
   initialView,
   resetRequest,
+  visible,
   onViewChange,
   initialPopup,
   markers,
@@ -65,12 +72,34 @@ function Viewport({
   facilities: Located[];
   initialView: MapView;
   resetRequest: number;
-  onViewChange: (view: NonNullable<MapView>) => void;
+  visible: boolean;
+  onViewChange: (view: MapView) => void;
   initialPopup: string | null;
   markers: RefObject<Map<string, LeafletCircleMarker>>;
 }) {
   const map = useMap();
   const restored = useRef(false);
+  const shown = useRef(visible);
+  const pendingFit = useRef(false);
+  // What caused the next moveend: only the user's own pans and zooms are
+  // saved; a fit to the selection means "fit" (view = null); restoring a
+  // saved view or re-measuring leaves the saved view alone
+  const source = useRef<"user" | "fit" | "quiet">("quiet");
+
+  // Pointer, wheel and key input on the map are the user's own moves (drag,
+  // pinch, scroll zoom, the +/- control, keyboard panning, popup autopan)
+  useEffect(() => {
+    const container = map.getContainer();
+    const markUser = () => {
+      source.current = "user";
+    };
+    const events = ["pointerdown", "wheel", "keydown"] as const;
+    for (const name of events)
+      container.addEventListener(name, markUser, { passive: true });
+    return () => {
+      for (const name of events) container.removeEventListener(name, markUser);
+    };
+  }, [map]);
 
   // Reopen the most recently selected facility's popup on mount (after a
   // reload). This component renders after the markers, so they exist by now
@@ -81,15 +110,38 @@ function Viewport({
   useEffect(() => {
     if (!restored.current && initialView) {
       restored.current = true;
+      source.current = "quiet";
       map.setView([initialView.lat, initialView.lng], initialView.zoom);
       return;
     }
     restored.current = true;
-    const bounds = facilities.length
-      ? latLngBounds(facilities.map((f) => [f.lat, f.lng]))
-      : latLngBounds(DEFAULT_BOUNDS);
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 9 });
+    if (!shown.current) {
+      pendingFit.current = true;
+      return;
+    }
+    source.current = "fit";
+    fitTo(map, facilities);
   }, [map, facilities, initialView, resetRequest]);
+
+  // Runs after the fit effect above in the same commit. Re-measures the
+  // container whenever the map is visible, and performs any fit that was
+  // deferred while it was hidden
+  useEffect(() => {
+    shown.current = visible;
+    if (!visible) return;
+    // invalidateSize fires its moveend synchronously and this effect runs
+    // after the fit effect, so restore the source or the fit's later
+    // (animated) moveend would be swallowed
+    const prev = source.current;
+    source.current = "quiet";
+    map.invalidateSize();
+    source.current = prev;
+    if (pendingFit.current) {
+      pendingFit.current = false;
+      source.current = "fit";
+      fitTo(map, facilities);
+    }
+  }, [map, visible, facilities]);
 
   // Trackpad pinch (and Cmd/Ctrl + scroll) zooms the map around the pointer
   // and never the page; a plain two-finger scroll still scrolls the page
@@ -110,6 +162,11 @@ function Viewport({
 
   useMapEvents({
     moveend: () => {
+      if (source.current === "quiet") return;
+      if (source.current === "fit") {
+        onViewChange(null);
+        return;
+      }
       const { lat, lng } = map.getCenter();
       onViewChange({ lat, lng, zoom: map.getZoom() });
     },
@@ -123,7 +180,9 @@ type Props = {
   view: MapView;
   // Bumped by Reset: refit even though the selection may be unchanged
   resetRequest: number;
-  onViewChange: (view: NonNullable<MapView>) => void;
+  // False while the section is collapsed; the map stays mounted but hidden
+  visible: boolean;
+  onViewChange: (view: MapView) => void;
   selected: string[];
   // Marker clicked: toggle the facility in the highlight set
   onToggle: (code: string) => void;
@@ -138,6 +197,7 @@ export default function FacilityMap({
   facilities,
   view,
   resetRequest,
+  visible,
   onViewChange,
   selected,
   onToggle,
@@ -154,6 +214,7 @@ export default function FacilityMap({
     [facilities],
   );
   const missing = facilities.length - located.length;
+  const colors = usePaletteColors();
 
   return (
     <figure
@@ -175,70 +236,88 @@ export default function FacilityMap({
         />
         {located.map((f) => {
           const isSelected = selected.includes(f.code);
-          const fill = isSelected ? SELECTED_COLOR : color(f);
-          return (
+          const halo = isSelected ? (
             <CircleMarker
-              key={f.code}
-              ref={(marker) => {
-                if (marker) markers.current.set(f.code, marker);
-                else markers.current.delete(f.code);
-              }}
+              key={`${f.code}-halo`}
               center={[f.lat, f.lng]}
-              radius={radius(f)}
-              eventHandlers={{ click: () => onToggle(f.code) }}
+              radius={radius(f) + 4}
+              interactive={false}
               pathOptions={{
-                color: fill,
-                fillColor: fill,
-                fillOpacity: isSelected ? 0.85 : 0.55,
-                weight: isSelected ? 3 : 1.5,
+                color: colors.selected,
+                weight: 2,
+                fill: false,
+                dashArray: "3 3",
               }}
-            >
-              <Tooltip direction="top" offset={[0, -4]}>
-                {f.name} ·{" "}
-                {f.matchingMw === null ? "—" : formatMw(f.matchingMw)}
-              </Tooltip>
-              <Popup>
-                <strong>{f.name}</strong>{" "}
-                <span className="muted">{f.code}</span>
-                <br />
-                <button
-                  type="button"
-                  className="popup-locate"
-                  onClick={() => onLocate(f.code)}
-                >
-                  More info <span aria-hidden="true">→</span>
-                </button>
-                <br />
-                {label("state", f.state)} ·{" "}
-                {f.techGroups.map((t) => label("techGroup", t)).join(", ")}
-                <br />
-                {f.statuses.map((s) => label("status", s)).join(", ")}
-                {f.retiredUnits > 0 && f.retiredUnits < f.allUnits && (
-                  <>
-                    {" "}
-                    · some units retired ({f.retiredUnits} of {f.allUnits})
-                  </>
-                )}
-                <br />
-                Matching MW:{" "}
-                {f.matchingMw === null ? "—" : formatMw(f.matchingMw)} ·{" "}
-                {f.matchingUnits === f.allUnits
-                  ? `${formatCount(f.allUnits)} units`
-                  : `${formatCount(f.matchingUnits)} of ${formatCount(f.allUnits)} units match`}
-                {f.keyDate && (
-                  <>
-                    <br />
-                    {f.keyDate.label}: {formatSourceDate(f.keyDate.date) ?? "—"}
-                  </>
-                )}
-              </Popup>
-            </CircleMarker>
+            />
+          ) : null;
+          const fill = isSelected ? colors.selected : statusColor(colors, f);
+          return (
+            <Fragment key={f.code}>
+              {halo}
+              <CircleMarker
+                ref={(marker) => {
+                  if (marker) markers.current.set(f.code, marker);
+                  else markers.current.delete(f.code);
+                }}
+                center={[f.lat, f.lng]}
+                radius={radius(f)}
+                eventHandlers={{ click: () => onToggle(f.code) }}
+                pathOptions={{
+                  color: colors.stroke,
+                  fillColor: fill,
+                  fillOpacity: isSelected ? 0.85 : 0.55,
+                  weight: isSelected ? 3 : 1.5,
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -4]}>
+                  {f.name} ·{" "}
+                  {f.matchingMw === null ? "—" : formatMw(f.matchingMw)}
+                </Tooltip>
+                <Popup>
+                  <strong>{f.name}</strong>{" "}
+                  <span className="muted">{f.code}</span>
+                  <br />
+                  <button
+                    type="button"
+                    className="popup-locate"
+                    onClick={() => onLocate(f.code)}
+                  >
+                    More info <span aria-hidden="true">→</span>
+                  </button>
+                  <br />
+                  {label("state", f.state)} ·{" "}
+                  {f.techGroups.map((t) => label("techGroup", t)).join(", ")}
+                  <br />
+                  {f.statuses.map((s) => label("status", s)).join(", ")}
+                  {f.retiredUnits > 0 && f.retiredUnits < f.allUnits && (
+                    <>
+                      {" "}
+                      · some units retired ({f.retiredUnits} of {f.allUnits})
+                    </>
+                  )}
+                  <br />
+                  Matching MW:{" "}
+                  {f.matchingMw === null ? "—" : formatMw(f.matchingMw)} ·{" "}
+                  {f.matchingUnits === f.allUnits
+                    ? `${formatCount(f.allUnits)} units`
+                    : `${formatCount(f.matchingUnits)} of ${formatCount(f.allUnits)} units match`}
+                  {f.keyDate && (
+                    <>
+                      <br />
+                      {f.keyDate.label}:{" "}
+                      {formatSourceDate(f.keyDate.date) ?? "—"}
+                    </>
+                  )}
+                </Popup>
+              </CircleMarker>
+            </Fragment>
           );
         })}
         <Viewport
           facilities={located}
           initialView={initialView}
           resetRequest={resetRequest}
+          visible={visible}
           onViewChange={onViewChange}
           initialPopup={initialPopup}
           markers={markers}
@@ -253,10 +332,50 @@ export default function FacilityMap({
             only
           </>
         )}
-        . Marker size follows matching MW; color follows status (teal operating,
-        amber commissioning, blue committed, grey retired, lavender mixed);
-        highlighted facilities are red. Drag to pan; pinch or ⌘/Ctrl + scroll to
-        zoom.
+        .{" "}
+        <ul className="map-legend" aria-label="Marker colours">
+          <li>
+            <span
+              className="legend-dot"
+              style={{ background: "var(--status-operating)" }}
+            />
+            Operating
+          </li>
+          <li>
+            <span
+              className="legend-dot"
+              style={{ background: "var(--status-commissioning)" }}
+            />
+            Commissioning
+          </li>
+          <li>
+            <span
+              className="legend-dot"
+              style={{ background: "var(--status-committed)" }}
+            />
+            Committed
+          </li>
+          <li>
+            <span
+              className="legend-dot"
+              style={{ background: "var(--status-retired)" }}
+            />
+            Retired
+          </li>
+          <li>
+            <span
+              className="legend-dot"
+              style={{ background: "var(--status-mixed)" }}
+            />
+            Mixed
+          </li>
+          <li>
+            <span className="legend-dot legend-halo" />
+            Highlighted
+          </li>
+        </ul>
+        Marker size follows matching MW; colour follows status (legend above).
+        Drag to pan; pinch or ⌘/Ctrl + scroll to zoom.
       </figcaption>
     </figure>
   );

@@ -99,7 +99,7 @@ export function FacilityTable({
   return (
     <section aria-labelledby="table-heading">
       <h2 id="table-heading" className="visually-hidden">
-        Facilities
+        Facility list
       </h2>
       <div className="table-wrap">
         <table>
@@ -197,6 +197,14 @@ export function FacilityTable({
                         {f.keyDate.past && " (past)"}:
                       </span>{" "}
                       <SourceDateText date={f.keyDate.date} />
+                      {f.closing && (
+                        <>
+                          <br />
+                          <span className="muted">
+                            Closing <SourceDateText date={f.closing} />
+                          </span>
+                        </>
+                      )}
                     </>
                   ) : (
                     "—"

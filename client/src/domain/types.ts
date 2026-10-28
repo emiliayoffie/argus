@@ -39,6 +39,13 @@ export type Status = (typeof STATUSES)[number];
 export const DIMENSIONS = ["state", "techGroup", "status"] as const;
 export type Dimension = (typeof DIMENSIONS)[number];
 
+// Column names for a dimension, as shown in toggles and headings
+export const DIMENSION_LABELS: Record<Dimension, string> = {
+  state: "State / region",
+  techGroup: "Technology",
+  status: "Status",
+};
+
 // What a breakdown bar measures: summed MW or distinct facilities.
 export const MEASURES = ["mw", "facilities"] as const;
 export type Measure = (typeof MEASURES)[number];
@@ -109,10 +116,16 @@ export type UnitRow = {
   dataLastSeen: string | null;
 };
 
-// "Came online in the last N months" choices; only 12 is offered in the UI,
-// 6 and 24 are URL-only for now
+// "Came online in the last N months" choices. An input-only shorthand:
+// `recent=N` in a URL is resolved into `commenced` (as `asOf − N months`)
+// before use and is never written back to the URL
 export const RECENT_MONTHS = [6, 12, 24] as const;
 export type RecentMonths = (typeof RECENT_MONTHS)[number] | null;
+
+// An inclusive YYYY-MM-DD window for a unit's commencement date; either side
+// may be open. `from > to` is valid input and matches nothing
+export type DateRange = { from: string | null; to: string | null };
+export const EMPTY_RANGE: DateRange = { from: null, to: null };
 
 // Base filters. Empty list = no constraint. OR within a facet, AND across.
 export type Filters = {
@@ -121,8 +134,13 @@ export type Filters = {
   statuses: Status[];
   // Facility name or code, case-insensitive.
   search: string;
-  // Only units that came online within this many months of the dataset date
   recentMonths: RecentMonths;
+  // Only units that came online in this range
+  commenced: DateRange;
+  // Only committed units expected to start in this range
+  expected: DateRange;
+  // Only retired units that closed in this range
+  closed: DateRange;
 };
 
 // Clicking a bar in the breakdown. Filters the rows one step further, after
@@ -143,6 +161,8 @@ export const DEFAULT_SORT: Sort = { key: "mw", direction: "desc" };
 export type AppState = {
   filters: Filters;
   groupBy: Dimension;
+  // Secondary dimension shown as stacked segments inside each bar
+  splitBy: Dimension | null;
   measure: Measure;
   drilldown: Drilldown;
   view: MapView;
@@ -178,6 +198,16 @@ export type Summary = {
   unknownCapacityUnits: number;
 };
 
+// One segment of a split-by breakdown bar, always in the split dimension's
+// canonical order so a segment key keeps the same colour on every bar
+export type BreakdownSegment = {
+  key: string;
+  label: string;
+  mw: number;
+  facilities: number;
+  units: number;
+};
+
 // One bar of a breakdown.
 export type BreakdownGroup = {
   key: string;
@@ -185,6 +215,9 @@ export type BreakdownGroup = {
   mw: number;
   facilities: number;
   units: number;
+  // MW-eligible units whose capacity is absent upstream
+  unknownMwUnits: number;
+  segments: BreakdownSegment[];
 };
 
 // The one date worth showing for a unit, chosen by its status.
@@ -211,6 +244,9 @@ export type FacilityRow = {
   retiredUnits: number;
   allUnits: number;
   keyDate: KeyDate | null;
+  // Earliest expected closure among operating units within the horizon;
+  // `null` when none is published
+  closing: SourceDate | null;
   // Facility coordinates; `null` when upstream has none. The row still counts.
   lat: number | null;
   lng: number | null;

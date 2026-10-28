@@ -1,7 +1,8 @@
 main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1.5rem;
+  /* Bottom room keeps the floating back-to-top button off the last row */
+  padding: 1.5rem 1.5rem 4.5rem;
   display: grid;
   gap: 1.25rem;
 }
@@ -12,8 +13,26 @@ main > * {
   min-width: 0;
 }
 
+/* The ready view sits in this wrapper so it can fade in as one; it must
+   mirror main's grid or the children lose their row spacing and min-width */
+.content {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.content > * {
+  min-width: 0;
+}
+
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
 .masthead h1 {
-  font-size: 1.75rem;
+  font-size: 2rem;
   letter-spacing: 0.02em;
   display: flex;
   align-items: baseline;
@@ -25,9 +44,14 @@ main > * {
   text-decoration: none;
 }
 
-.masthead h1 a:hover,
 .masthead h1 a:focus-visible {
   text-decoration: underline;
+}
+
+/* Shares the section numbers' accent: teal in light, mint in dark */
+.tagline {
+  color: var(--section-number);
+  font-size: 0.9rem;
 }
 
 /* The "period" after the wordmark is the theme toggle */
@@ -36,7 +60,7 @@ main > * {
   cursor: pointer;
   display: inline-flex;
   align-items: flex-end;
-  padding: 0 0.3em 0 0.08em;
+  padding: 0 0.25em 0 0.12em;
   line-height: 1;
 }
 
@@ -46,39 +70,474 @@ main > * {
   border-radius: 4px;
 }
 
-.moon {
-  display: block;
-  width: 0.32em;
-  height: 0.32em;
+/* Colour-blind mode swatches: chunky solid circles filled with the accent
+   that palette would use in the current theme, so each previews itself */
+.palette-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 0.7rem;
+}
+
+.palette-label {
+  margin-right: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--swatch);
+  cursor: pointer;
+  transition: transform 120ms ease-out;
+}
+
+.swatch[data-palette="deutan"] {
+  --swatch: #d55e00;
+}
+
+.swatch[data-palette="tritan"] {
+  --swatch: #c62828;
+}
+
+.swatch[data-palette="mono"] {
+  --swatch: #777777;
+}
+
+:root[data-theme="dark"] .swatch[data-palette="deutan"] {
+  --swatch: #ff8f45;
+}
+
+:root[data-theme="dark"] .swatch[data-palette="tritan"] {
+  --swatch: #ff7eb6;
+}
+
+:root[data-theme="dark"] .swatch[data-palette="mono"] {
+  --swatch: #b8b2a8;
+}
+
+/* The pressed ring is a second cue beyond the fill change */
+.swatch[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px var(--paper);
+  animation: ring-in 180ms ease-out;
+}
+
+@keyframes ring-in {
+  from {
+    outline-offset: 0;
+    outline-color: transparent;
+  }
+  to {
+    outline-offset: 2px;
+    outline-color: var(--ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch[aria-pressed="true"] {
+    animation: none;
+  }
+
+  .swatch {
+    transition: none;
+  }
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+/* Instant tooltip below any control with data-tip, on hover and keyboard
+   focus. The aria-label carries the full name for assistive tech */
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--ivory);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.3;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-2px);
   transition:
-    background 0.25s,
-    box-shadow 0.25s;
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
+  pointer-events: none;
+  /* Above Leaflet panes (z-index 400+) so tooltips never hide behind the map */
+  z-index: 1100;
 }
 
-/* Inset offset shadow on a transparent disc draws a crescent */
-.moon.crescent {
-  background: transparent;
-  box-shadow: inset 0.12em 0.06em 0 0 currentColor;
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.examples {
+/* The dots sit in the corner, so their tooltips hang to the left */
+.swatch::after {
+  left: auto;
+  right: 0;
+}
+
+/* Marker colour legend under the map; the highlighted entry is a dashed
+   ring like the halo drawn around selected markers */
+.map-legend {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.5rem 1rem;
+  gap: 0.3rem 0.9rem;
+  list-style: none;
+  margin: 0.3rem 0;
+  padding: 0;
 }
 
-.examples a {
-  color: var(--accent);
+.map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--marker-stroke);
+}
+
+.legend-halo {
+  background: transparent;
+  border: 2px dashed var(--accent);
+}
+
+/* The eye: open in light mode, a closed lid in dark mode */
+.theme-toggle .eye {
+  display: block;
+  height: 0.7em;
+  width: auto;
+  /* Sits a little above the baseline so it centres on the lowercase letters */
+  transform: translateY(-0.04em);
+}
+
+.theme-toggle[data-state="open"] .eye-closed {
+  display: none;
+}
+
+/* The lid is a solid ink rect clipped to the eye outline: it scales down
+   from the top edge, filling the eye black until the theme flips */
+.theme-toggle .lid {
+  transform-box: fill-box;
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+/* Idle blink: a ~100 ms lid drop once every 25 s. In the closed state the
+   open group stays rendered but visibility-animated so it can peek open for
+   ~500 ms per cycle while the closed line hides */
+.theme-toggle[data-state="open"] .lid {
+  animation: idle-blink 15s ease-in-out infinite;
+}
+
+.theme-toggle[data-state="closed"] .eye-open {
+  display: inline;
+  visibility: hidden;
+  animation: peek-show 15s step-end infinite;
+}
+
+.theme-toggle[data-state="closed"] .eye-closed {
+  animation: peek-hide 15s step-end infinite;
+}
+
+.theme-toggle[data-state="closed"] .lid {
+  animation: peek-lid 15s ease-in-out infinite;
+}
+
+/* Percentages are of the 15s cycle: ~100ms blink, ~500ms peek */
+@keyframes idle-blink {
+  0%,
+  100% {
+    transform: scaleY(0);
+  }
+  0.67% {
+    transform: scaleY(1);
+  }
+  1.33% {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes peek-show {
+  0%,
+  100% {
+    visibility: hidden;
+  }
+  0.17%,
+  3.33% {
+    visibility: visible;
+  }
+  3.5% {
+    visibility: hidden;
+  }
+}
+
+@keyframes peek-hide {
+  0%,
+  100% {
+    visibility: visible;
+  }
+  0.17%,
+  3.33% {
+    visibility: hidden;
+  }
+  3.5% {
+    visibility: visible;
+  }
+}
+
+@keyframes peek-lid {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  0.83%,
+  2.67% {
+    transform: scaleY(0);
+  }
+  3.33% {
+    transform: scaleY(1);
+  }
+}
+
+/* Hover blinks the open eye */
+.theme-toggle[data-state="open"]:hover .lid {
+  animation: wink 700ms ease-in-out;
+}
+
+/* Hovering the closed eye makes it peek open until the pointer leaves */
+.theme-toggle[data-state="closed"]:hover .eye-open {
+  visibility: visible;
+  animation: none;
+}
+
+.theme-toggle[data-state="closed"]:hover .eye-closed {
+  visibility: hidden;
+  animation: none;
+}
+
+.theme-toggle[data-state="closed"]:hover .lid {
+  animation: lid-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes wink {
+  0%,
+  100% {
+    transform: scaleY(0);
+  }
+  40%,
+  60% {
+    transform: scaleY(1);
+  }
+}
+
+/* The one place the click must win: these beat the hover and idle
+   animations regardless of cascade order. The JS timers own the theme
+   flip; !important here is purely visual */
+.theme-toggle.closing .lid {
+  animation: lid-down 130ms ease-in forwards !important;
+}
+
+.theme-toggle.opening .lid {
+  animation: lid-up 380ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards !important;
+}
+
+@keyframes lid-down {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes lid-up {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle .lid,
+  .theme-toggle .eye-open,
+  .theme-toggle .eye-closed {
+    animation: none;
+  }
+
+  /* With no peek animation to hide it, keep the open group truly hidden */
+  .theme-toggle[data-state="closed"] .eye-open {
+    display: none;
+  }
+}
+
+.menu.examples summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--example);
+  font-weight: 600;
+  border-color: color-mix(in srgb, var(--example) 45%, var(--border));
+}
+
+.menu.examples summary:hover,
+.menu.examples[open] summary {
+  border-color: var(--example);
+  background: var(--example-soft);
+}
+
+.menu.examples summary[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Hangs from the button's right edge, inside the toolbar's stacking context */
+.menu-panel.examples-panel {
+  left: auto;
+  right: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  min-width: 0;
+  padding: 0.5rem;
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: 0 16px 40px var(--shadow);
+}
+
+.examples-title {
+  margin: 0;
+  padding: 0.3rem 0.6rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.examples-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.examples-panel a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.examples-panel a:hover,
+.examples-panel a:focus-visible {
+  background: var(--ivory);
+}
+
+.examples-q {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.examples-hint {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.examples-panel a svg {
+  flex: none;
+  stroke: var(--example);
+}
+
+.headline,
+.headline-skel {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.12;
 }
 
 .headline {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  max-width: 70ch;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  color: var(--ink);
+}
+
+/* "129.0 GW" stays together. One 2.1 s sweep at the start of every 10 s
+   cycle; both ends of the gradient are solid accent, so the reset is
+   invisible */
+.headline .figure {
+  --gloss: color-mix(in srgb, var(--accent) 45%, white);
+  color: var(--accent);
+  white-space: nowrap;
+  background-image: linear-gradient(
+    105deg,
+    var(--accent) 0 38%,
+    var(--gloss) 48%,
+    var(--accent) 58% 100%
+  );
+  background-size: 280% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shine 10s ease-in-out 0.65s infinite;
+}
+
+@keyframes shine {
+  0% {
+    background-position: 100% 0;
+  }
+  21%,
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .headline .figure {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* One bone per line: 0.95em bones plus 0.17em of gap/padding fill the 1.12em
+   line height, so n bones take the same height as n lines of text */
+.headline-skel {
+  display: grid;
+  gap: 0.17em;
+  padding-bottom: 0.17em;
+}
+
+.headline-skel .skel-narrow {
+  display: none;
 }
 
 footer {
@@ -132,8 +591,8 @@ footer a {
 }
 
 .menu.active summary {
-  border-color: var(--lavender);
-  background: var(--lavender-soft);
+  border-color: var(--filter-on);
+  background: var(--filter-on-soft);
   font-weight: 600;
 }
 
@@ -143,8 +602,8 @@ footer a {
   margin-left: 0.35rem;
   padding: 0 0.35em;
   border-radius: 999px;
-  background: var(--lavender);
-  color: #fff;
+  background: var(--filter-badge);
+  color: var(--filter-badge-ink);
   font-size: 0.75rem;
   text-align: center;
   line-height: 1.5;
@@ -183,30 +642,204 @@ footer a {
   font-size: 0.78rem;
 }
 
-/* A single-option control that sits like a fourth menu in the toolbar */
-.toolbar-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--paper);
-  user-select: none;
+/* From/To fields inside the date menu: label above the input */
+.menu-date {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  padding: 0.15rem 0;
 }
 
-.toolbar-check.active {
-  border-color: var(--lavender);
-  background: var(--lavender-soft);
+.menu-date label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.menu-date input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Floated so it renders inside the panel instead of on its top border; the
+   next row clears it so nothing wraps alongside */
+.menu-panel legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 0.4rem;
   font-weight: 600;
+  padding: 0;
+}
+
+.menu-panel legend + * {
+  clear: both;
+}
+
+/* Dates menu: dividers, not boxes. Hangs from the Dates button's right edge
+   like the Examples panel */
+.menu-panel.dates-panel {
+  left: auto;
+  right: 0;
+  width: min(26rem, calc(100vw - 2rem));
+  min-width: 0;
+  max-height: calc(100dvh - 11rem);
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: 0 16px 40px var(--shadow);
+}
+
+.dates-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.dates-title {
+  font-weight: 600;
+}
+
+.dates-about {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  border-color: transparent;
+  background: none;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.dates-about:hover {
+  color: var(--ink);
+  background: var(--ivory);
+}
+
+.dates-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.dates-note p {
+  margin: 0 0 0.3rem;
+}
+
+.dates-group {
+  margin: 0;
+  padding: 0.7rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.dates-group legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dates-chip {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--ivory);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dates-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.dates-preset {
+  border-radius: 999px;
+}
+
+.dates-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+.dates-foot p {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.dates-foot .menu-clear {
+  margin-top: 0;
+}
+
+/* Words do the work here; the colour is a hint, not the only signal */
+.menu-error {
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0.4rem 0 0;
+}
+
+/* Square icon button sized like the menu summaries */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--ivory);
+}
+
+/* The toolbar wraps this button to either edge depending on width, so its
+   short tooltip is centred and fits wherever the button lands */
+.icon-button::after {
+  left: 50%;
+  transform: translate(-50%, -2px);
+}
+
+.icon-button:hover::after,
+.icon-button:focus-visible::after {
+  transform: translate(-50%, 0);
+}
+
+/* Counter-clockwise turn to match the reset arrow */
+.icon-button.spinning svg {
+  transform-origin: center;
+  animation: spin-back 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spin-back {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon-button.spinning svg {
+    animation: none;
+  }
 }
 
 .toolbar-search {
   flex: 1 1 14rem;
   min-width: 10rem;
   padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius);
   background: var(--paper);
 }
@@ -215,37 +848,208 @@ footer a {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+@media (max-width: 1000px) {
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .card {
-  padding: 1rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 11rem;
+  padding: 1rem 1.1rem 0.95rem;
   background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.card-head {
+  min-height: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .card h3 {
-  font-size: 0.85rem;
-  font-weight: 600;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--muted);
 }
 
+/* One size for all four cards: the figures are comparable, so none of them
+   scales to fill its card */
 .card .value {
-  font-size: 1.75rem;
-  font-weight: 600;
+  margin: 0.85rem 0 0.7rem;
+  font-size: clamp(2rem, 3.1vw, 2.9rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
-.card .split,
-.card details {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
+.card .value.accent {
+  color: var(--accent);
 }
 
-.card summary {
-  cursor: pointer;
+.card-detail {
+  margin: auto 0 0;
+  font-size: 0.85rem;
   color: var(--muted);
+  line-height: 1.4;
+}
+
+.card-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.status-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.status-bar > span {
+  display: block;
+  height: 100%;
+}
+
+.status-legend {
+  margin: auto 0 0;
+  padding: 0.6rem 0 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Two lines per entry (dot and status over the figure) so four statuses
+   fit a narrow card without clipping */
+.status-legend li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.35rem;
+  line-height: 1.25;
+}
+
+.status-legend .num {
+  grid-column: 2;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-bar .status-operating,
+.status-legend .status-operating {
+  background: var(--status-operating);
+}
+
+.status-bar .status-commissioning,
+.status-legend .status-commissioning {
+  background: var(--status-commissioning);
+}
+
+.status-bar .status-committed,
+.status-legend .status-committed {
+  background: var(--status-committed);
+}
+
+.status-bar .status-retired,
+.status-legend .status-retired {
+  background: var(--status-retired);
+}
+
+.status-bar .status-other,
+.status-legend .status-other {
+  background: var(--muted);
+}
+
+/* The card is the positioning context for the explainer panel */
+.info {
+  position: static;
+}
+
+.info summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.info summary::-webkit-details-marker {
+  display: none;
+}
+
+.info summary:hover,
+.info[open] summary {
+  color: var(--accent);
+}
+
+.info summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.info summary::after {
+  left: auto;
+  right: 0;
+}
+
+.info[open] summary::after {
+  display: none;
+}
+
+/* Spans the card so it can't run off the viewport for the first or last
+   card, and floats over the content instead of stretching the row */
+.info-panel {
+  position: absolute;
+  top: 2.6rem;
+  left: 0.6rem;
+  right: 0.6rem;
+  z-index: 1000;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 6px 20px var(--shadow);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* A closed <details> still lays out its contents (content-visibility), and
+   the panel's containing block is then the tiny details slot, not the card:
+   its text would stick out past the viewport. Hide it outright */
+.info:not([open]) .info-panel {
+  display: none;
+}
+
+.info-panel p {
+  margin: 0;
+}
+
+.info-panel p + p {
+  margin-top: 0.5rem;
 }
 
 /* Breakdown */
@@ -256,7 +1060,16 @@ footer a {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
+}
+
+/* Children may shrink below their content width; otherwise a wide control
+   or bar row would stretch the card past the viewport */
+.breakdown > *,
+.breakdown-geo > *,
+.bars > li {
+  min-width: 0;
 }
 
 .breakdown-header {
@@ -266,9 +1079,16 @@ footer a {
   gap: 1rem;
 }
 
-.breakdown-header h2 {
-  font-size: 1.1rem;
-  margin-right: auto;
+.toggle-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.toggle-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .toggle {
@@ -287,7 +1107,14 @@ footer a {
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
-.toggle button[aria-pressed="true"],
+/* Chart controls: a quiet ink tint and weight mark the pressed option, so
+   the colour stays with the data. Selected bars keep the accent */
+.toggle button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ink) 8%, var(--paper));
+  border-color: color-mix(in srgb, var(--ink) 30%, var(--border));
+  font-weight: 600;
+}
+
 .bar[aria-pressed="true"] {
   background: var(--accent-soft);
   border-color: var(--accent);
@@ -303,7 +1130,7 @@ footer a {
 
 .bar {
   display: grid;
-  grid-template-columns: 8rem 1fr 6rem;
+  grid-template-columns: 8rem 1fr auto;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
@@ -313,8 +1140,105 @@ footer a {
   background: transparent;
 }
 
-.bar:hover {
+.bar:hover,
+.bar.hover {
   background: var(--ivory);
+}
+
+/* Grouped by state: a compact choropleth sits beside the bars and the two
+   highlight together. The map column is fixed so the bars keep their width */
+.breakdown-geo {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 0.5rem 1.5rem;
+  align-items: start;
+}
+
+.state-map {
+  margin: 0;
+  padding-top: 0.3rem;
+}
+
+.state-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.state-map path {
+  fill: var(--bone);
+  stroke: var(--paper);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition:
+    fill 150ms ease-out,
+    stroke 150ms ease-out;
+}
+
+.state-map path.hover {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.state-map path.selected {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.state-map path:focus-visible {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+/* Legend: the ramp from the lightest tint to the full colour, then the
+   neutral used for states with nothing matching */
+.state-map-legend {
+  display: grid;
+  gap: 0.15rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.state-map-scale {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--viz) 18%, var(--paper)),
+    var(--viz)
+  );
+}
+
+.state-map-scale-labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.state-map-key {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.3;
+}
+
+.state-map-none {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--bone);
+  border: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-map path {
+    transition: none;
+  }
 }
 
 .bar-track {
@@ -327,12 +1251,57 @@ footer a {
 .bar-fill {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--viz);
+}
+
+/* Stacked segments sit edge to edge with a hairline paper gap */
+.bar-segment {
+  display: block;
+  float: left;
+  height: 100%;
+  box-shadow: 1px 0 0 var(--paper);
+}
+
+.bar-note {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.bar-share {
+  color: var(--muted);
+}
+
+.split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.split-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.split-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border);
 }
 
 .bar-value {
+  min-width: 6rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .drilldown-note {
@@ -360,9 +1329,165 @@ footer a {
   gap: 0.5rem;
 }
 
-.results-header h2 {
-  font-size: 1.1rem;
-  margin-right: auto;
+/* Collapse / Expand in the Map heading: a text button with a chevron that
+   points down while the map is collapsed */
+.map-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  border-color: transparent;
+  background: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.map-toggle:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--ivory);
+}
+
+.map-toggle .chevron {
+  transition: transform 150ms ease-out;
+}
+
+.map-toggle[aria-expanded="false"] .chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-toggle .chevron {
+    transition: none;
+  }
+}
+
+/* Floating back-to-top: charcoal disc with a cream arrow. Hidden via
+   visibility so it's out of the tab order until the page has scrolled a
+   screen; the 0s/200ms visibility transition delays hiding until the fade
+   ends and shows immediately */
+.back-to-top {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  /* Above Leaflet panes (400+), below the sticky toolbar and menus (1100) */
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: var(--ink);
+  color: var(--ivory);
+  box-shadow: 0 6px 20px var(--shadow);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out,
+    visibility 0s linear 200ms;
+}
+
+.back-to-top[data-visible="true"] {
+  opacity: 0.9;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.back-to-top:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.back-to-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Dark theme: --ink is cream there, so use the card charcoal with a hairline */
+:root[data-theme="dark"] .back-to-top {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top,
+  .back-to-top:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Editorial section heading: small accent number, hairline rules, title
+   subordinate to the headline */
+.section-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 1rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+/* A third column only exists when there are actions, so the heading rule
+   still runs to the card edge on sections without them */
+.section-heading.has-actions {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.section-actions {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+}
+
+.section-number {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--section-number);
+  font-variant-numeric: tabular-nums;
+}
+
+.section-number::after {
+  content: "";
+  width: 2.5rem;
+  height: 1px;
+  background: var(--border);
+}
+
+.section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.section-heading h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Spans to the end so an actions column doesn't narrow it on phones */
+.section-sub {
+  grid-column: 2 / -1;
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 60ch;
 }
 
 .chip {
@@ -394,6 +1519,36 @@ footer a {
 :root[data-theme="dark"] .map-canvas .leaflet-tile {
   filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3)
     brightness(0.7);
+}
+
+/* Leaflet's own zoom and fade transitions also stop under reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .map-canvas .leaflet-zoom-anim .leaflet-zoom-animated,
+  .map-canvas .leaflet-fade-anim .leaflet-tile,
+  .map-canvas .leaflet-fade-anim .leaflet-popup {
+    transition: none;
+  }
+}
+
+/* In the colour-blind modes the basemap steps back so only the markers carry
+   colour; achromatopsia goes fully grey */
+:root[data-palette="deutan"] .map-canvas .leaflet-tile,
+:root[data-palette="tritan"] .map-canvas .leaflet-tile {
+  filter: saturate(0.25);
+}
+
+:root[data-palette="mono"] .map-canvas .leaflet-tile {
+  filter: grayscale(1);
+}
+
+:root[data-palette="deutan"][data-theme="dark"] .map-canvas .leaflet-tile,
+:root[data-palette="tritan"][data-theme="dark"] .map-canvas .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.1)
+    brightness(0.7);
+}
+
+:root[data-palette="mono"][data-theme="dark"] .map-canvas .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) grayscale(1) brightness(0.7);
 }
 
 :root[data-theme="dark"] .leaflet-container {
@@ -527,16 +1682,20 @@ td.num {
 }
 
 .badge.status-operating {
-  border-color: #3f9d8a;
+  border-color: var(--status-operating);
+}
+
+.badge.status-commissioning {
+  border-color: var(--status-commissioning);
+}
+
+.badge.status-committed {
+  border-color: var(--status-committed);
 }
 
 .badge.status-retired {
   border-style: dashed;
-}
-
-.badge.status-committed,
-.badge.status-commissioning {
-  border-color: var(--accent);
+  border-color: var(--status-retired);
 }
 
 td .note {
@@ -546,10 +1705,32 @@ td .note {
 
 .pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 1rem;
   padding: 0.75rem;
+}
+
+.export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.export:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* The button sits at the right edge, so its tooltip hangs left */
+.export::after {
+  left: auto;
+  right: 0;
 }
 
 /* Status and error */
@@ -557,6 +1738,113 @@ td .note {
 .status {
   padding: 1rem;
   color: var(--muted);
+}
+
+/* Loading skeleton: bone blocks in the shape of the page, one shared sweep */
+.skeleton {
+  filter: blur(0.6px);
+  display: grid;
+  gap: 1.25rem;
+}
+
+.skeleton > * {
+  min-width: 0;
+}
+
+/* Heights mirror the real heading's line boxes so the page doesn't shift
+   when the data arrives */
+.skel-h2 {
+  width: 13rem;
+  height: calc(1.35rem * 1.45);
+  background-clip: content-box;
+  padding-block: 0.15rem;
+}
+
+.skel-sub {
+  display: flex;
+  align-items: center;
+  min-height: 1.35rem;
+}
+
+.skel-card-value {
+  width: 55%;
+  height: clamp(2rem, 3.1vw, 2.9rem);
+  margin: 0.85rem 0 0.7rem;
+}
+
+/* Line boxes sized like the real detail and note text, so the cards keep
+   their height when the data arrives */
+.skel-card-detail {
+  display: flex;
+  align-items: center;
+  min-height: 1.2rem;
+  margin-top: auto;
+}
+
+.skel-card-note {
+  display: flex;
+  align-items: center;
+  min-height: 1.1rem;
+  margin-top: 0.15rem;
+}
+
+.skel-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem 0.5rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+}
+
+.bone {
+  display: block;
+  border-radius: 6px;
+  background: var(--bone);
+  position: relative;
+  overflow: hidden;
+}
+
+.bone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bone-sheen),
+    transparent
+  );
+  animation: bone-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes bone-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.fade-in {
+  animation: fade-in 220ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone::after,
+  .fade-in {
+    animation: none;
+  }
 }
 
 .banner-error {
@@ -572,11 +1860,109 @@ td .note {
 /* Last in the file so it wins the cascade over the desktop rules above */
 @media (max-width: 640px) {
   main {
-    padding: 1rem;
+    padding: 1rem 1rem 4.5rem;
   }
 
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stacked cards don't need to match a neighbour's height */
+  .card {
+    min-height: 0;
+  }
+
+  /* Stays clearly smaller than the headline on phones */
+  .masthead h1 {
+    font-size: 1.45rem;
+  }
+
+  /* The visible label would squeeze the subtitle onto a third line; it stays
+     available to assistive tech as the group's name */
+  .palette-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .section-heading {
+    column-gap: 0.75rem;
+  }
+
+  .section-heading h2 {
+    font-size: 1.2rem;
+  }
+
+  .section-number::after {
+    width: 1.25rem;
+  }
+
+  .skel-h2 {
+    height: calc(1.2rem * 1.45);
+  }
+
+  .skel-sub {
+    min-height: 2.7rem;
+  }
+
+  /* The headline wraps to about four lines on a phone */
+  .headline-skel .skel-narrow {
+    display: block;
+  }
+
+  /* Label and figure share the top line and may wrap; the bar runs the
+     full width below, so a long value can never push the row sideways */
   .bar {
-    grid-template-columns: 6rem 1fr 4.5rem;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.6rem;
+  }
+
+  .bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .bar-label,
+  .bar-value {
+    min-width: 0;
+  }
+
+  .bar-value {
+    white-space: normal;
+  }
+
+  /* One segmented control per row, label above; the buttons share the
+     width and their text may wrap to a second line */
+  .toggle-field {
+    display: grid;
+    gap: 0.3rem;
+    width: 100%;
+  }
+
+  .toggle {
+    display: flex;
+    width: 100%;
+  }
+
+  .toggle button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.25rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    white-space: normal;
+  }
+
+  /* Map above the bars, narrower than full width so it stays an inset */
+  .breakdown-geo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .state-map {
+    width: min(14rem, 100%);
   }
 
   .map-canvas {
@@ -586,6 +1972,20 @@ td .note {
   /* Static so the open panel positions against the sticky toolbar, not the menu */
   .menu {
     position: static;
+  }
+
+  /* Same specificity as the desktop rule, so restate the spanning panel */
+  .menu-panel.examples-panel {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+  }
+
+  .menu-panel.dates-panel {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    max-height: 60vh;
   }
 
   /* Panel spans the toolbar width and scrolls instead of overflowing */
@@ -602,9 +2002,29 @@ td .note {
     white-space: normal;
   }
 
+  /* The share gets its own line under the figure; the "+n unknown" note
+     stays visible now that the value column can wrap */
+  .bar-share {
+    display: block;
+    font-size: 0.75rem;
+  }
+
+  .menu-date label {
+    padding: 0;
+  }
+
+  .menu-date input {
+    font-size: 1rem;
+  }
+
   .menu-panel input[type="checkbox"] {
     width: 1.25rem;
     height: 1.25rem;
+  }
+
+  .swatch {
+    width: 12px;
+    height: 12px;
   }
 
   /* 16px inputs keep iOS from auto-zooming on focus */
@@ -614,6 +2034,10 @@ td .note {
   }
 
   .toolbar-search {
-    flex-basis: 100%;
+    flex: 1 1 auto;
+  }
+
+  .icon-button {
+    flex: 0 0 auto;
   }
 }

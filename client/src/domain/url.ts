@@ -1,3 +1,4 @@
+import { isCalendarDate } from "./format";
 import { EMPTY_FILTERS } from "./filter";
 import {
   DEFAULT_SORT,
@@ -13,6 +14,8 @@ import {
   type Drilldown,
   type MapView,
   type RecentMonths,
+  EMPTY_RANGE,
+  type DateRange,
   type Sort,
 } from "./types";
 
@@ -21,6 +24,7 @@ export const SEARCH_MAX_LENGTH = 100;
 export const DEFAULT_STATE: AppState = {
   filters: EMPTY_FILTERS,
   groupBy: "techGroup",
+  splitBy: null,
   measure: "mw",
   drilldown: null,
   view: null,
@@ -107,10 +111,25 @@ function parseSort(value: string | null): Sort {
   return { key, direction };
 }
 
-// recent=6|12|24, the only windows offered. Anything else is no window
+// recent=6|12|24, the only windows offered. Input-only: resolved into
+// `commenced` before use and never serialised back out
 function parseRecent(value: string | null): RecentMonths {
   if (!value) return null;
   return RECENT_MONTHS.find((m) => String(m) === value) ?? null;
+}
+
+// dateRange=FROM..TO, either side may be empty. Without `..` the whole
+// value is a one-sided `from`. Non-calendar dates on either side are open
+// ends. Used by commenced, expected and closed
+function parseRange(value: string | null): DateRange {
+  if (!value) return { ...EMPTY_RANGE };
+  const separator = value.indexOf("..");
+  const rawFrom = separator >= 0 ? value.slice(0, separator) : value;
+  const rawTo = separator >= 0 ? value.slice(separator + 2) : "";
+  return {
+    from: isCalendarDate(rawFrom) ? rawFrom : null,
+    to: isCalendarDate(rawTo) ? rawTo : null,
+  };
 }
 
 // Reads ?state=NSW,QLD&tech=battery&status=operating&q=bess&by=state&measure=mw&drill=state:NSW&sort=keyDate:desc&recent=12
@@ -118,6 +137,11 @@ function parseRecent(value: string | null): RecentMonths {
 export function parseState(params: URLSearchParams): AppState {
   const groupBy =
     parseOne(params.get("by"), DIMENSIONS) ?? DEFAULT_STATE.groupBy;
+  // A split that mirrors the group dimension is redundant: drop it
+  const splitBy =
+    parseOne(params.get("split"), DIMENSIONS) === groupBy
+      ? null
+      : (parseOne(params.get("split"), DIMENSIONS) ?? null);
   const measure =
     parseOne(params.get("measure"), MEASURES) ?? DEFAULT_STATE.measure;
 
@@ -139,8 +163,12 @@ export function parseState(params: URLSearchParams): AppState {
       statuses: parseList(params.get("status"), STATUSES),
       search: (params.get("q") ?? "").trim().slice(0, SEARCH_MAX_LENGTH),
       recentMonths: parseRecent(params.get("recent")),
+      commenced: parseRange(params.get("commenced")),
+      expected: parseRange(params.get("expected")),
+      closed: parseRange(params.get("closed")),
     },
     groupBy,
+    splitBy,
     measure,
     drilldown,
     view: parseView(params.get("view")),
@@ -158,9 +186,16 @@ export function serializeState(state: AppState): string {
     params.set("tech", filters.techGroups.join(","));
   if (filters.statuses.length) params.set("status", filters.statuses.join(","));
   if (filters.search.trim()) params.set("q", filters.search.trim());
-  if (filters.recentMonths !== null)
-    params.set("recent", String(filters.recentMonths));
+  for (const [name, range] of [
+    ["commenced", filters.commenced],
+    ["expected", filters.expected],
+    ["closed", filters.closed],
+  ] as const) {
+    if (range.from !== null || range.to !== null)
+      params.set(name, `${range.from ?? ""}..${range.to ?? ""}`);
+  }
   if (state.groupBy !== DEFAULT_STATE.groupBy) params.set("by", state.groupBy);
+  if (state.splitBy !== null) params.set("split", state.splitBy);
   if (state.measure !== DEFAULT_STATE.measure)
     params.set("measure", state.measure);
   if (state.drilldown)

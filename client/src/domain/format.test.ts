@@ -3,9 +3,11 @@ import {
   dateSortKey,
   formatCount,
   formatMw,
+  yearsAfter,
   formatMwh,
   formatSourceDate,
   isApproximate,
+  isCalendarDate,
   monthsBefore,
 } from "./format";
 
@@ -91,5 +93,32 @@ describe("monthsBefore", () => {
     expect(monthsBefore("2028-02-29", 12)).toBe("2027-02-28");
     expect(monthsBefore("2026-03-31", 1)).toBe("2026-02-28");
     expect(monthsBefore("2024-03-31", 1)).toBe("2024-02-29");
+  });
+});
+
+describe("isCalendarDate", () => {
+  it("accepts real YYYY-MM-DD dates, leap-aware", () => {
+    expect(isCalendarDate("2024-02-29")).toBe(true);
+    expect(isCalendarDate("2023-02-29")).toBe(false);
+    expect(isCalendarDate("2026-10-22")).toBe(true);
+  });
+
+  it("rejects impossible and malformed values", () => {
+    expect(isCalendarDate("2026-13-01")).toBe(false);
+    expect(isCalendarDate("2026-04-31")).toBe(false);
+    expect(isCalendarDate("2026-4-1")).toBe(false);
+    expect(isCalendarDate("2026-04-01T00:00")).toBe(false);
+  });
+});
+
+describe("yearsAfter", () => {
+  it("adds whole years", () => {
+    expect(yearsAfter("2026-10-22", 10)).toBe("2036-10-22");
+    expect(yearsAfter("2026-01-15", 1)).toBe("2027-01-15");
+  });
+
+  it("clamps Feb 29 to Feb 28", () => {
+    expect(yearsAfter("2024-02-29", 1)).toBe("2025-02-28");
+    expect(yearsAfter("2024-02-29", 4)).toBe("2028-02-29");
   });
 });
