@@ -48,6 +48,12 @@ main > * {
   text-decoration: underline;
 }
 
+/* Shares the section numbers' accent: teal in light, mint in dark */
+.tagline {
+  color: var(--section-number);
+  font-size: 0.9rem;
+}
+
 /* The "period" after the wordmark is the theme toggle */
 .theme-toggle {
   all: unset;

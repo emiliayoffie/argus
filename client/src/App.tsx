@@ -334,7 +334,7 @@ export default function App() {
               </svg>
             </button>
           </h1>
-          <p className="muted">
+          <p className="tagline">
             Australian energy facilities, from OpenElectricity
           </p>
         </div>
