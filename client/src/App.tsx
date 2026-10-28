@@ -15,7 +15,6 @@ import { FacilityTable, PAGE_SIZE } from "./components/FacilityTable";
 import type { Example } from "./components/ExamplesMenu";
 import { FilterBar } from "./components/FilterBar";
 import { PageSkeleton } from "./components/PageSkeleton";
-import { PaletteDot } from "./components/PaletteDot";
 import { SectionHeading } from "./components/SectionHeading";
 import { SummaryStrip } from "./components/SummaryStrip";
 import { groupBy, summarize } from "./domain/aggregate";
@@ -362,9 +361,7 @@ export default function App() {
                 aria-label={tip}
                 data-tip={tip}
                 onClick={() => setPalette(palette === p ? null : p)}
-              >
-                <PaletteDot />
-              </button>
+              />
             );
           })}
         </div>

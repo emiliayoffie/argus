@@ -7,8 +7,10 @@
   --ivory: #faf8f5;
   --accent: #cc285e;
   --accent-soft: #fce7ef;
-  --lavender: #7f6bb0;
-  --lavender-soft: #efeaf7;
+  /* Highlight role (rows, chips, popups) is the brand pink in light, so
+     "highlighted" means one thing on the map and in the table alike */
+  --lavender: var(--accent);
+  --lavender-soft: var(--accent-soft);
   --shadow: rgba(43, 38, 34, 0.12);
   --bone: #ebe7e0;
   --bone-sheen: rgba(255, 255, 255, 0.6);
@@ -16,25 +18,40 @@
   --status-commissioning: #d99a2b;
   --status-committed: #5b86c4;
   --status-retired: #8d8079;
-  --status-mixed: var(--lavender);
+  --status-mixed: #8b7bb5;
   --marker-stroke: #ffffff;
   --radius: 6px;
 
-  /* Light-theme secondary accents: electric mint and icy blue. --mint-deep
-     is the text/border-safe variant (about 5:1 on ivory) */
-  --mint: #65e6c4;
-  --mint-soft: #e4fbf4;
-  --mint-deep: #0e725b;
-  --ice: #69ddf2;
+  /* The light theme mirrors the dark one with the emphasis swapped: pink
+     leads, teal supports. --teal is the text/border-safe depth (5.3:1 on
+     ivory); --teal-fill is for bars and shading */
+  --teal: #176f63;
+  --teal-fill: #4fb3a3;
+  --teal-soft: #e3f4f0;
   /* Semantic roles, so dark mode and the palettes can keep their own hues */
-  --filter-on: var(--mint-deep);
-  --filter-on-soft: var(--mint-soft);
-  --filter-badge: var(--mint);
+  --filter-on: var(--teal);
+  --filter-on-soft: var(--teal-soft);
+  --filter-badge: var(--teal-fill);
   --filter-badge-ink: var(--ink);
-  --viz: var(--ice);
-  --section-number: var(--mint-deep);
-  --example: var(--mint-deep);
-  --example-soft: var(--mint-soft);
+  --viz: var(--teal-fill);
+  --section-number: var(--teal);
+  --example: var(--teal);
+  --example-soft: var(--teal-soft);
+
+  /* Technology colours for stacked bars and their legend: three families
+     (renewables teal, storage violet, fossil warm brown) with lightness steps
+     inside each, so a split reads as renewable / storage / fossil at a glance
+     and the legend names the technology. Shared with dark mode at a
+     different lightness; kept apart from the status colours above */
+  --tech-solar: #8fd3c5;
+  --tech-wind: #4fb3a3;
+  --tech-hydro: #2a8f80;
+  --tech-bioenergy: #176f63;
+  --tech-battery: #9a5fb8;
+  --tech-gas: #e8a27a;
+  --tech-distillate: #a97f5b;
+  --tech-coal: #6e6660;
+  --tech-other: #b0a89f;
 
   font-family:
     system-ui,
@@ -69,6 +86,15 @@
   --status-retired: #928374;
   --status-mixed: var(--lavender);
   --marker-stroke: #1d2021;
+  --tech-solar: #c2ece3;
+  --tech-wind: #8fd3c5;
+  --tech-hydro: #5fbfa8;
+  --tech-bioenergy: #3a9684;
+  --tech-battery: #c89be0;
+  --tech-gas: #efb08a;
+  --tech-distillate: #c4956c;
+  --tech-coal: #8f8780;
+  --tech-other: #5a544e;
 }
 
 /* Dark mode and the colour-vision palettes keep their own hues for these
@@ -180,6 +206,64 @@
   --paper: #2e2e2e;
   --border: #4a4a4a;
   --bone: #383838;
+}
+
+/* Technology colours per colour-vision palette: Okabe–Ito for red-green,
+   a red/teal/navy set for blue-yellow, and a lightness ramp for greyscale.
+   Mid-tones that hold up on both themes; only the near-black/near-white
+   ends swap for dark mode */
+:root[data-palette="deutan"] {
+  --tech-solar: #e69f00;
+  --tech-wind: #56b4e9;
+  --tech-hydro: #0072b2;
+  --tech-battery: #cc79a7;
+  --tech-bioenergy: #009e73;
+  --tech-coal: #333333;
+  --tech-gas: #d55e00;
+  --tech-distillate: #8d8079;
+  --tech-other: #cfc9c2;
+}
+
+:root[data-palette="tritan"] {
+  --tech-solar: #e85d75;
+  --tech-wind: #1b9e9e;
+  --tech-hydro: #1f4e79;
+  --tech-battery: #c62828;
+  --tech-bioenergy: #7fd1d1;
+  --tech-coal: #333333;
+  --tech-gas: #f0907a;
+  --tech-distillate: #8d8079;
+  --tech-other: #cfc9c2;
+}
+
+:root[data-palette="deutan"][data-theme="dark"],
+:root[data-palette="tritan"][data-theme="dark"] {
+  --tech-coal: #d9d4cc;
+  --tech-other: #5a544e;
+}
+
+:root[data-palette="mono"] {
+  --tech-solar: #1a1a1a;
+  --tech-wind: #3a3a3a;
+  --tech-hydro: #555555;
+  --tech-battery: #6f6f6f;
+  --tech-bioenergy: #888888;
+  --tech-coal: #a0a0a0;
+  --tech-gas: #b8b8b8;
+  --tech-distillate: #d0d0d0;
+  --tech-other: #e4e4e4;
+}
+
+:root[data-palette="mono"][data-theme="dark"] {
+  --tech-solar: #f5f0e6;
+  --tech-wind: #dcd7ce;
+  --tech-hydro: #c3beb5;
+  --tech-battery: #aaa59d;
+  --tech-bioenergy: #918c85;
+  --tech-coal: #78736d;
+  --tech-gas: #5f5b56;
+  --tech-distillate: #47433f;
+  --tech-other: #302d2a;
 }
 
 * {

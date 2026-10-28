@@ -37,17 +37,27 @@ const SPLIT_LABELS: Record<SplitOption, string> = {
   status: "Status",
 };
 
-// Segment shade: a lightness ramp over the bar colour so it reads in every
-// palette including greyscale. The ramp spans the segments present in the
-// current breakdown (canonical order, same set as the legend), so colours
-// spread out instead of all landing near 100%
-const segmentShades = (
+// Segment colours. Technologies and statuses each have a categorical colour
+// (CSS variables, so themes and colour-blind palettes substitute their own
+// sets). States have no natural hue, so a state split is a lightness ramp of
+// the bar colour over the segments present (canonical order, same set as the
+// legend), spread out instead of all landing near 100%
+const segmentColors = (
   splitBy: Dimension,
   groups: BreakdownGroup[],
 ): Map<string, string> => {
   const present = DIM_ORDER[splitBy].filter((key) =>
     groups.some((g) => g.segments.some((s) => s.key === key)),
   );
+  if (splitBy === "techGroup")
+    return new Map(present.map((key) => [key, `var(--tech-${key})`]));
+  if (splitBy === "status")
+    return new Map(
+      present.map((key) => [
+        key,
+        key === "other" ? "var(--muted)" : `var(--status-${key})`,
+      ]),
+    );
   const step = 65 / Math.max(1, present.length - 1);
   return new Map(
     present.map((key, i) => [
@@ -111,7 +121,7 @@ export function BreakdownPanel({
   const shades =
     splitBy === null
       ? new Map<string, string>()
-      : segmentShades(splitBy, groups);
+      : segmentColors(splitBy, groups);
   // Share of the total only makes sense for MW: facility counts double-count
   // hybrids, so a percentage would lie
   const totalMw = groups.reduce((n, g) => n + g.mw, 0);
