@@ -286,7 +286,7 @@ export default function App() {
                     d="M2.5 10 C2.5 5 6.5 2 12 2 C17.5 2 21.5 5 21.5 10 C21.5 15 17.5 18 12 18 C6.5 18 2.5 15 2.5 10 Z"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.4"
+                    strokeWidth="2.1"
                     strokeLinejoin="round"
                   />
                   <ellipse
@@ -321,7 +321,7 @@ export default function App() {
                     d="M3.5 9 Q12 16 20.5 9"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2.8"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                   />
                 </g>

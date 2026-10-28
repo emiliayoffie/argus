@@ -32,7 +32,7 @@ main > * {
 }
 
 .masthead h1 {
-  font-size: 1.75rem;
+  font-size: 2rem;
   letter-spacing: 0.02em;
   display: flex;
   align-items: baseline;
@@ -54,7 +54,7 @@ main > * {
   cursor: pointer;
   display: inline-flex;
   align-items: flex-end;
-  padding: 0 0.3em 0 0.08em;
+  padding: 0 0.25em 0 0.02em;
   line-height: 1;
 }
 
@@ -222,10 +222,10 @@ main > * {
 /* The eye: open in light mode, a closed lid in dark mode */
 .theme-toggle .eye {
   display: block;
-  height: 0.58em;
+  height: 0.7em;
   width: auto;
   /* Sits a little above the baseline so it centres on the lowercase letters */
-  transform: translateY(-0.06em);
+  transform: translateY(-0.04em);
 }
 
 .theme-toggle[data-state="open"] .eye-closed {
@@ -1571,6 +1571,11 @@ td .note {
   /* Stacked cards don't need to match a neighbour's height */
   .card {
     min-height: 0;
+  }
+
+  /* Stays clearly smaller than the headline on phones */
+  .masthead h1 {
+    font-size: 1.6rem;
   }
 
   /* The visible label would squeeze the subtitle onto a third line; it stays
