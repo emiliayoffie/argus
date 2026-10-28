@@ -33,6 +33,20 @@ yarn install
 yarn dev                                        # http://localhost:5173
 ```
 
+## Using it
+
+Everything on the page describes one selection, and the URL always matches the screen, so any view can be shared by copying the address.
+
+- **Filters** sit in the toolbar: state/region, technology, status, a search box, and a Dates menu with three ranges (came online, expected online, closed). Each range is tied to the status it belongs to, and every filter must match the same unit.
+- **Examples** in the toolbar opens the three customer questions as starting points. They're ordinary filter states:
+  - Batteries recently online in NSW and QLD → `?state=NSW,QLD&tech=battery&status=commissioning,operating&by=status&sort=keyDate:desc&recent=12`
+  - Committed wind, solar and battery by state → `?tech=solar,wind,battery&status=committed&by=state&split=techGroup`
+  - The fossil fleet, retired and remaining → `?tech=coal,gas,distillate&by=status&measure=mw&split=techGroup`
+- **The headline and four cards** sum the selection: facilities, units, registered capacity (with a stacked bar by status) and battery storage. Each card's ⓘ explains how the number is calculated and what was left out.
+- **Capacity breakdown** groups the selection by state, technology or status, in MW or facilities, optionally split by a second dimension. Clicking a bar narrows the cards, map and table without hiding the other bars.
+- **Facilities** shows the same selection on a map and in a sortable, paginated table. Click rows or markers to highlight facilities for comparison; totals never change. **Export CSV** writes every listed facility (all pages, after filters and drilldown) with dates and their precision.
+- The eye next to the wordmark switches light and dark mode; the dots at the top right switch to deuteranopia, tritanopia or greyscale palettes, which recolour the markers, legends and map tiles.
+
 ## How it's built
 
 - `server/` is a Cloudflare Worker using Hono. It holds the token, fetches `/v4/facilities/` once per request, validates the response with Zod and passes on only the fields the client needs.
@@ -52,7 +66,8 @@ This is the only endpoint. The client fetches the full dataset once and does all
 - Each battery is counted once.
 - Missing capacity is shown as "—", left out of totals, and counted as unknown.
 - Grouped facility counts can add up to more than the total, because a hybrid facility appears in more than one group. The UI notes this.
-- Dates keep their precision. Year or month dates are shown with a `~`. Expected closure dates aren't shown: most are decades-out placeholders.
+- Dates keep their precision. Year or month dates are shown with a `~`, and the CSV carries a precision column beside each date. Expected closure dates are shown only when they fall within ten years of the dataset date; the rest are decades-out placeholders.
+- Statuses are registry classifications. "Retired" MW can include capacity re-registered under a newer unit, so the status split is labelled as registry data rather than physical capacity lost.
 - Facilities without coordinates still appear in the table and in every total.
 
 ## Limitations
@@ -67,8 +82,8 @@ This is the only endpoint. The client fetches the full dataset once and does all
 ### Stretch goals
 
 - Expand facilities to show individual units and their details.
-- Add date-range filters and data-completeness indicators.
-- Compare portfolios side by side and export results to CSV.
+- Add data-completeness indicators per group, beyond the current unknown-MW counts.
+- Compare portfolios side by side.
 - Add Playwright tests for key user workflows.
 
 ### Longer term
