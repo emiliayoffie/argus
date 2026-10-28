@@ -27,11 +27,24 @@ So I built Argus around the numbers. It's one explorer rather than three separat
 
 ## Running it locally
 
+Prerequisites: Node 22 (see `.nvmrc`) and Yarn 3.4.1. The repo pins Yarn through `.yarn/releases`, so any Yarn 1.22 or later picks it up; run `yarn --version` to confirm it prints `3.4.1`. You also need an [OpenElectricity API key](https://platform.openelectricity.org.au).
+
 ```bash
-cp server/.dev.vars.example server/.dev.vars   # add your OpenElectricity API token
+cp server/.dev.vars.example server/.dev.vars   # set OPEN_ELECTRICITY_API_TOKEN
 yarn install
 yarn dev                                        # http://localhost:5173
 ```
+
+The token is read only by the Worker, from `server/.dev.vars`, which is git-ignored. It is never sent to the browser. Run every command from the repo root.
+
+| Command          | What it does                                            |
+| ---------------- | ------------------------------------------------------- |
+| `yarn dev`       | Vite client and Worker together; Vite proxies `/api`    |
+| `yarn test`      | Vitest, once (`yarn vitest` to watch)                   |
+| `yarn lint`      | ESLint                                                  |
+| `yarn typecheck` | `tsc` for the client and the Worker                     |
+| `yarn build`     | Production client build into `client/dist`              |
+| `yarn check`     | lint, format check, typecheck, test and build, in order |
 
 ## Using it
 
@@ -75,7 +88,29 @@ This is the only endpoint. The client fetches the full dataset once and does all
 - Map markers can overlap at low zoom, and browser back/forward navigation doesn't step through previous views.
 - Browser testing is currently manual, with automated tests covering domain logic and API behavior.
 - Argus uses a current snapshot of facility data, so it can't show how projects have changed over time.
-- A public deployment would need additional API quota protection and a review of data licensing.
+- This is a prototype for local use. See Data use and deployment below before exposing it publicly.
+
+## Data use and deployment
+
+The data comes from the [OpenElectricity](https://openelectricity.org.au) API and is shown with a link to it in the page footer. Unless stated otherwise, OpenElectricity data is licensed [CC BY-NC 4.0](https://platform.openelectricity.org.au/license): you must credit OpenElectricity and say if you changed the data (Argus normalises, filters and aggregates it). Community and Academic plans are for non-commercial use only; commercial use needs an Enterprise licence from OpenElectricity.
+
+Before this is put in front of the public:
+
+- **Licence:** confirm the plan and terms cover the intended use.
+- **Edge cache:** cache `/api/facilities` for 15 minutes, matching the upstream `max-age=900`. Today every page load makes one upstream request.
+- **Rate limiting:** add a Cloudflare rate-limit rule on `/api/facilities`, so visitors cannot exhaust the API quota.
+- **Token:** store it with `wrangler secret put OPEN_ELECTRICITY_API_TOKEN`, never in `wrangler.toml`.
+
+## Verification
+
+Run on 2026-10-28 with Node 22.23.3 and Yarn 3.4.1:
+
+- `yarn check` passed: ESLint, Prettier, typecheck, 193 tests in 13 files (domain logic, URL state, API route and error mapping, client fetch states), and the production client build.
+- Checked in headless Chrome against the running app:
+  - The default view `/` keeps a clean URL and a disabled Reset button after the map fits itself. Dragging the map writes `view=`; pressing Reset returns to `/` with Reset disabled again. A shared `view=` link restores its position.
+  - There is no horizontal scrolling at 320, 360, 390 or 1280 px, nor at 390 px with the WCAG text-spacing overrides applied. No visible text is under 12 px.
+  - Text, badge and input-outline contrast meets WCAG AA in light and dark with all three palettes (measured, not estimated).
+- Not covered: automated browser tests, Safari and Firefox, and screen-reader testing.
 
 ## Next steps
 
