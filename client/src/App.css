@@ -698,6 +698,18 @@ footer a {
   background: var(--ivory);
 }
 
+/* The toolbar wraps this button to either edge depending on width, so its
+   short tooltip is centred and fits wherever the button lands */
+.icon-button::after {
+  left: 50%;
+  transform: translate(-50%, -2px);
+}
+
+.icon-button:hover::after,
+.icon-button:focus-visible::after {
+  transform: translate(-50%, 0);
+}
+
 /* Counter-clockwise turn to match the reset arrow */
 .icon-button.spinning svg {
   transform-origin: center;

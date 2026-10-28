@@ -367,7 +367,7 @@ export function FilterBar({
         onAnimationEnd={(e) => e.currentTarget.classList.remove("spinning")}
         disabled={disabled || !canReset}
         aria-label="Reset filters and view"
-        title="Reset"
+        data-tip="Reset"
       >
         <svg
           width="16"
