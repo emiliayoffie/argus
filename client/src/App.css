@@ -394,14 +394,15 @@ main > * {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--accent);
+  color: var(--example);
   font-weight: 600;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-color: color-mix(in srgb, var(--example) 45%, var(--border));
 }
 
 .menu.examples summary:hover,
 .menu.examples[open] summary {
-  border-color: var(--accent);
+  border-color: var(--example);
+  background: var(--example-soft);
 }
 
 .menu.examples summary[aria-disabled="true"] {
@@ -465,7 +466,7 @@ main > * {
 
 .examples-panel a svg {
   flex: none;
-  stroke: var(--accent);
+  stroke: var(--example);
 }
 
 .headline,
@@ -584,8 +585,8 @@ footer a {
 }
 
 .menu.active summary {
-  border-color: var(--lavender);
-  background: var(--lavender-soft);
+  border-color: var(--filter-on);
+  background: var(--filter-on-soft);
   font-weight: 600;
 }
 
@@ -595,8 +596,8 @@ footer a {
   margin-left: 0.35rem;
   padding: 0 0.35em;
   border-radius: 999px;
-  background: var(--lavender);
-  color: #fff;
+  background: var(--filter-badge);
+  color: var(--filter-badge-ink);
   font-size: 0.75rem;
   text-align: center;
   line-height: 1.5;
@@ -1011,7 +1012,7 @@ footer a {
 .bar-fill {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--viz);
 }
 
 /* Stacked segments sit edge to edge with a hairline paper gap */
@@ -1165,6 +1166,19 @@ footer a {
   margin-top: 0.75rem;
 }
 
+/* A third column only exists when there are actions, so the heading rule
+   still runs to the card edge on sections without them */
+.section-heading.has-actions {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.section-actions {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+}
+
 .section-number {
   display: inline-flex;
   align-items: center;
@@ -1172,7 +1186,7 @@ footer a {
   font-size: 0.8rem;
   font-weight: 600;
   letter-spacing: 0.14em;
-  color: var(--accent);
+  color: var(--section-number);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1200,8 +1214,9 @@ footer a {
   background: var(--border);
 }
 
+/* Spans to the end so an actions column doesn't narrow it on phones */
 .section-sub {
-  grid-column: 2;
+  grid-column: 2 / -1;
   margin: 0.2rem 0 0;
   font-size: 0.9rem;
   color: var(--muted);
@@ -1430,8 +1445,25 @@ td .note {
   padding: 0.75rem;
 }
 
-.pagination .export {
-  margin-left: auto;
+.export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.export:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* The button sits at the right edge, so its tooltip hangs left */
+.export::after {
+  left: auto;
+  right: 0;
 }
 
 /* Status and error */

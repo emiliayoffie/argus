@@ -7,18 +7,30 @@ export function SectionHeading({
   id,
   title,
   children,
+  actions,
 }: {
   number: string;
   id: string;
   title: string;
   children?: ReactNode;
+  // Controls for the section, held at the right end of the heading rule
+  actions?: ReactNode;
 }) {
   return (
-    <div className="section-heading">
+    <div
+      className={
+        actions !== undefined
+          ? "section-heading has-actions"
+          : "section-heading"
+      }
+    >
       <span className="section-number" aria-hidden="true">
         {number}
       </span>
       <h2 id={id}>{title}</h2>
+      {actions !== undefined && (
+        <div className="section-actions">{actions}</div>
+      )}
       {children !== undefined && <p className="section-sub">{children}</p>}
     </div>
   );

@@ -37,7 +37,7 @@ const SPLIT_LABELS: Record<SplitOption, string> = {
   status: "Status",
 };
 
-// Segment shade: a lightness ramp over the accent so it reads in every
+// Segment shade: a lightness ramp over the bar colour so it reads in every
 // palette including greyscale. The ramp spans the segments present in the
 // current breakdown (canonical order, same set as the legend), so colours
 // spread out instead of all landing near 100%
@@ -52,7 +52,7 @@ const segmentShades = (
   return new Map(
     present.map((key, i) => [
       key,
-      `color-mix(in srgb, var(--accent) ${Math.round(100 - i * step)}%, var(--paper))`,
+      `color-mix(in srgb, var(--viz) ${Math.round(100 - i * step)}%, var(--paper))`,
     ]),
   );
 };

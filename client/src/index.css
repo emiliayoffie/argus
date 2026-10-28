@@ -1,11 +1,11 @@
 :root {
   color-scheme: light;
-  --ink: #2b2622;
+  --ink: #292622;
   --muted: #6c5f58;
   --border: #ddd4ca;
   --paper: #ffffff;
-  --ivory: #faf8f4;
-  --accent: #c92a60;
+  --ivory: #faf8f5;
+  --accent: #cc285e;
   --accent-soft: #fce7ef;
   --lavender: #7f6bb0;
   --lavender-soft: #efeaf7;
@@ -19,6 +19,22 @@
   --status-mixed: var(--lavender);
   --marker-stroke: #ffffff;
   --radius: 6px;
+
+  /* Light-theme secondary accents: electric mint and icy blue. --mint-deep
+     is the text/border-safe variant (about 5:1 on ivory) */
+  --mint: #65e6c4;
+  --mint-soft: #e4fbf4;
+  --mint-deep: #0e725b;
+  --ice: #69ddf2;
+  /* Semantic roles, so dark mode and the palettes can keep their own hues */
+  --filter-on: var(--mint-deep);
+  --filter-on-soft: var(--mint-soft);
+  --filter-badge: var(--mint);
+  --filter-badge-ink: var(--ink);
+  --viz: var(--ice);
+  --section-number: var(--mint-deep);
+  --example: var(--mint-deep);
+  --example-soft: var(--mint-soft);
 
   font-family:
     system-ui,
@@ -53,6 +69,21 @@
   --status-retired: #928374;
   --status-mixed: var(--lavender);
   --marker-stroke: #1d2021;
+}
+
+/* Dark mode and the colour-vision palettes keep their own hues for these
+   roles; the var() references resolve against each palette's own accent and
+   lavender */
+:root[data-theme="dark"],
+:root[data-palette] {
+  --filter-on: var(--lavender);
+  --filter-on-soft: var(--lavender-soft);
+  --filter-badge: var(--lavender);
+  --filter-badge-ink: #fff;
+  --viz: var(--accent);
+  --section-number: var(--accent);
+  --example: var(--accent);
+  --example-soft: var(--accent-soft);
 }
 
 /* Colour-vision palettes: each overrides the accent, lavender and status

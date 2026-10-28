@@ -108,6 +108,7 @@ export default function App() {
   }, [blink, toggleTheme]);
   const eyeClipId = useId();
   const paletteLabelId = useId();
+  const exportHintId = useId();
   // The view is read from the URL once, on mount, and written back from the
   // event handlers below; there's no effect watching either side
   const [state, setState] = useState<AppState>(() =>
@@ -149,6 +150,10 @@ export default function App() {
     () => sortFacilities(groupByFacility(shown, lifecycle, asOf), sort),
     [shown, lifecycle, asOf, sort],
   );
+  const exportHint =
+    facilities.length === 0
+      ? "No facilities to export"
+      : `Export all ${formatCount(facilities.length)} matching facilities as CSV`;
 
   // Every view change goes through here so the URL always matches the screen.
   // replaceState, not pushState: Back should leave the app, not undo a click
@@ -446,7 +451,49 @@ export default function App() {
           />
 
           <section className="results" aria-labelledby="results-heading">
-            <SectionHeading number="02" id="results-heading" title="Facilities">
+            <SectionHeading
+              number="02"
+              id="results-heading"
+              title="Facilities"
+              actions={
+                <>
+                  <button
+                    type="button"
+                    className="export"
+                    onClick={() =>
+                      downloadCsv(
+                        `argus-facilities-${asOfDay}.csv`,
+                        facilitiesToCsv(facilities),
+                      )
+                    }
+                    disabled={facilities.length === 0}
+                    aria-describedby={exportHintId}
+                    data-tip={exportHint}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path d="M12 3v12" />
+                      <path d="m6 10 6 6 6-6" />
+                      <path d="M4 21h16" />
+                    </svg>
+                    Export CSV
+                  </button>
+                  <span id={exportHintId} className="visually-hidden">
+                    {exportHint}
+                  </span>
+                </>
+              }
+            >
               Every facility in the current view, on the map and in the table.
               Highlight rows or markers to compare them; export the list as CSV.
             </SectionHeading>
@@ -538,12 +585,6 @@ export default function App() {
                 onSelectRange={selectRange}
                 locateCode={locate.code}
                 locateRequest={locate.request}
-                onExport={() =>
-                  downloadCsv(
-                    `argus-facilities-${asOfDay}.csv`,
-                    facilitiesToCsv(facilities),
-                  )
-                }
               />
             )}
           </section>
