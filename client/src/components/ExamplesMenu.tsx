@@ -1,10 +1,13 @@
-import { useDropdown } from "../useDropdown";
+import type { KeyboardEvent } from "react";
+import { moveFocus, useDropdown } from "../useDropdown";
 
 export type Example = { question: string; hint: string; query: string };
 
 // "Examples" opens a floating list of starting-point questions, so
 // the presets stay available without taking space in the page. Picking one
-// closes the list and returns focus to the trigger
+// closes the list and returns focus to the trigger. Keyboard: Enter/Space on
+// the trigger opens and focuses the first question, Up/Down/Home/End move,
+// Enter or Space picks, Escape closes and returns focus
 export function ExamplesMenu({
   examples,
   disabled,
@@ -15,16 +18,33 @@ export function ExamplesMenu({
   onPick: (query: string) => void;
 }) {
   const { details, open, close, detailsProps } = useDropdown();
-  const { onToggle, ...restDetailsProps } = detailsProps;
+  const { onToggle, onKeyDown, ...restDetailsProps } = detailsProps;
+
+  const links = () =>
+    Array.from(
+      details.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? [],
+    );
+
+  const onMenuKeyDown = (event: KeyboardEvent<HTMLDetailsElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented || !details.current?.open) return;
+    // Links only follow Enter natively; menu items are expected to take Space too
+    if (event.key === " " && event.target instanceof HTMLAnchorElement) {
+      event.preventDefault();
+      event.target.click();
+      return;
+    }
+    moveFocus(event, links());
+  };
 
   return (
     <details
       className="menu examples"
       {...restDetailsProps}
+      onKeyDown={onMenuKeyDown}
       onToggle={(e) => {
         onToggle(e);
-        if (e.currentTarget.open)
-          details.current?.querySelector<HTMLElement>("a")?.focus();
+        if (e.currentTarget.open) links()[0]?.focus();
       }}
     >
       <summary

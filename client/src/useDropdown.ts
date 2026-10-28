@@ -54,3 +54,40 @@ export function useDropdown() {
 
   return { details, open, close, detailsProps };
 }
+
+// Which item Up/Down/Home/End moves to from `index` (-1 when nothing in the
+// list is focused), wrapping at both ends; null when the key isn't one of
+// those four, so callers can handle their own keys
+export function nextIndex(
+  key: string,
+  index: number,
+  length: number,
+): number | null {
+  if (length === 0) return null;
+  switch (key) {
+    case "ArrowDown":
+      return (index + 1) % length;
+    case "ArrowUp":
+      return index <= 0 ? length - 1 : index - 1;
+    case "Home":
+      return 0;
+    case "End":
+      return length - 1;
+    default:
+      return null;
+  }
+}
+
+// Roving focus for a <details> menu's items; true when the key was handled
+export function moveFocus(
+  event: KeyboardEvent<HTMLElement>,
+  items: HTMLElement[],
+): boolean {
+  const active = document.activeElement;
+  const index = active instanceof HTMLElement ? items.indexOf(active) : -1;
+  const target = nextIndex(event.key, index, items.length);
+  if (target === null) return false;
+  event.preventDefault();
+  items[target]?.focus();
+  return true;
+}

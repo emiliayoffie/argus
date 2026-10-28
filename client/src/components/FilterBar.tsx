@@ -12,7 +12,7 @@ import {
 } from "../domain/types";
 import { SEARCH_MAX_LENGTH } from "../domain/url";
 import { ExamplesMenu, type Example } from "./ExamplesMenu";
-import { useDropdown } from "../useDropdown";
+import { moveFocus, useDropdown } from "../useDropdown";
 
 type Props = {
   filters: Filters;
@@ -68,17 +68,7 @@ function FilterMenu<T extends string>({
       event.target.click();
       return;
     }
-    const items = focusables();
-    const active = document.activeElement;
-    const index = active instanceof HTMLElement ? items.indexOf(active) : -1;
-    const moveTo = (i: number) => {
-      event.preventDefault();
-      items[(i + items.length) % items.length]?.focus();
-    };
-    if (event.key === "ArrowDown") moveTo(index + 1);
-    else if (event.key === "ArrowUp") moveTo(index - 1);
-    else if (event.key === "Home") moveTo(0);
-    else if (event.key === "End") moveTo(items.length - 1);
+    moveFocus(event, focusables());
   };
 
   const toggle = (value: T, checked: boolean) =>
